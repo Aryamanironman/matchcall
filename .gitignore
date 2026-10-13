@@ -1,0 +1,7 @@
+.venv/
+.env
+__pycache__/
+output/
+data/V1.zip
+data/roboflow-mirror/
+models/
