@@ -35,12 +35,16 @@ app = FastAPI(title="Football Commentary Dubber")
 
 class Job:
     def __init__(self, filename: str, home: str, away: str, t0: float,
-                 duration: float | None, orig_audio: bool):
+                 duration: float | None, orig_audio: bool,
+                 score_home: int = 0, score_away: int = 0,
+                 minute_offset: float = 0.0):
         self.id = uuid.uuid4().hex[:12]
         self.filename = filename
         self.home, self.away = home, away
         self.t0, self.duration = t0, duration
         self.orig_audio = orig_audio
+        self.score_home, self.score_away = score_home, score_away
+        self.minute_offset = minute_offset
         self.status = "queued"          # queued|running|done|error|cancelled
         self.stage = "waiting"
         self.progress = 0.0             # 0..1 overall
@@ -57,6 +61,20 @@ class Job:
 
 _JOBS: dict[str, Job] = {}
 _QUEUE: "queue.Queue[Job]" = queue.Queue()
+
+
+def _as_int(value: str, default: int = 0) -> int:
+    try:
+        return max(0, int(float(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_float(value: str, default: float = 0.0) -> float:
+    try:
+        return max(0.0, float(value))
+    except (TypeError, ValueError):
+        return default
 
 
 class JobCancelled(Exception):
@@ -115,6 +133,8 @@ def _run_job(job: Job):
     summary = pipeline.run_pipeline(
         Path(job.filename), job.home, job.away, t0=job.t0,
         duration=job.duration, orig_audio=job.orig_audio,
+        start_score={"home": job.score_home, "away": job.score_away},
+        minute_offset=job.minute_offset,
         progress=progress, on_transcript=on_transcript, on_segment=on_segment,
         _cancel_check=lambda: job.cancel_flag,
     )
@@ -131,7 +151,9 @@ threading.Thread(target=_worker, daemon=True).start()
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...), home: str = Form("Home"),
                  away: str = Form("Away"), t0: str = Form("0"),
-                 dur: str = Form(""), orig_audio: bool = Form(True)):
+                 dur: str = Form(""), orig_audio: bool = Form(True),
+                 score_home: str = Form("0"), score_away: str = Form("0"),
+                 minute_offset: str = Form("0")):
     if not file.filename:
         raise HTTPException(400, "no file")
     dest = UPLOAD_DIR / f"{int(time.time())}_{Path(file.filename).name}"
@@ -152,7 +174,8 @@ async def upload(file: UploadFile = File(...), home: str = Form("Home"),
     except ValueError:
         dur_f = None
     job = Job(str(dest), home.strip() or "Home", away.strip() or "Away",
-              t0_f, dur_f, orig_audio)
+              t0_f, dur_f, orig_audio, _as_int(score_home),
+              _as_int(score_away), _as_float(minute_offset))
     _JOBS[job.id] = job
     _QUEUE.put(job)
     return {"job_id": job.id}
@@ -233,6 +256,9 @@ async def cancel(job_id: str):
 async def upload_existing(home: str = Form("Home"), away: str = Form("Away"),
                           t0: str = Form("0"), dur: str = Form(""),
                           orig_audio: bool = Form(True),
+                          score_home: str = Form("0"),
+                          score_away: str = Form("0"),
+                          minute_offset: str = Form("0"),
                           file: str = Form(...)):
     """Re-register an already-uploaded file (server-side path) as a new job —
     lets a big earlier upload be reprocessed without re-uploading."""
@@ -248,7 +274,8 @@ async def upload_existing(home: str = Form("Home"), away: str = Form("Away"),
     except ValueError:
         dur_f = None
     job = Job(str(p), home.strip() or "Home", away.strip() or "Away",
-              t0_f, dur_f, orig_audio)
+              t0_f, dur_f, orig_audio, _as_int(score_home),
+              _as_int(score_away), _as_float(minute_offset))
     _JOBS[job.id] = job
     _QUEUE.put(job)
     return {"job_id": job.id}
@@ -263,6 +290,32 @@ def _media_url(job: Job) -> str | None:
     except ValueError:
         return None
     return f"/media/{rel}"
+
+
+@app.get("/api/demo")
+async def demo_state():
+    """The precomputed ARG-FRA reel, moments and stats."""
+    from app import training_status
+    return training_status.demo_status()
+
+
+@app.get("/api/training")
+async def training_state():
+    """Live YOLO/LLM training state, demo stats and the ClearML ledger."""
+    from app import training_status
+    return training_status.training_bundle()
+
+
+@app.get("/api/training/asset/{name}")
+async def training_asset(name: str):
+    """Serve whitelisted plots/files from the YOLO run directory."""
+    from app import training_status
+    if name not in training_status.ASSETS:
+        raise HTTPException(404, "unknown asset")
+    target = training_status.YOLO_RUN / name
+    if not target.exists():
+        raise HTTPException(404)
+    return FileResponse(target)
 
 
 @app.get("/media/{path:path}")
