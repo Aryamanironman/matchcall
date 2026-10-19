@@ -64,6 +64,7 @@ def _clean(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     text = text.encode("ascii", "ignore").decode()  # drop tokenizer mojibake
     text = re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)  # fromFrance -> from France
     # Keep the spoken line inside the ~10 s clip (and inside one breath).
     words = text.split()
     if len(words) > 20:

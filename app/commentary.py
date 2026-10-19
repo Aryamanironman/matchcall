@@ -243,12 +243,17 @@ class Gpt2Announcer:
         self.fallback = TemplateAnnouncer(teams)
         self.gpt2_lines = 0
         self.fallback_lines = 0
+        self._used: set[str] = set()
 
     def event_line(self, label: str, features: dict) -> tuple[str, str]:
         # fine-tuned GPT-2 first; the validator rejects invented facts and
         # the template announcer is the per-line fallback
         try:
             line = self._gpt2.event_line(label, features, self.teams)
+            key = line.lower()
+            if key in self._used:
+                raise RuntimeError("duplicate line")
+            self._used.add(key)
             self.gpt2_lines += 1
             return line
         except Exception:  # noqa: BLE001
