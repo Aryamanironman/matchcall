@@ -5,3 +5,15 @@ output/
 data/V1.zip
 data/roboflow-mirror/
 models/
+
+# large/runtime artifacts
+output_match_*/
+output_final/
+fifa_test*/
+fifa_match.mp4*
+_probe_*
+.venv/
+.pytest_cache/
+work/
+*.part
+*.ytdl
