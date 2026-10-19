@@ -1,19 +1,25 @@
 """Score-bug reader: goal anchors from the broadcast scoreboard.
 
-Cheap glyph spikes propose candidate moments; OCR on the two score digits
-confirms which side changed and filters graphics wipes; the broadcast clock
-supplies the match minute. This is the "CNN action spotting" gold signal for
-goals: it survives replays, celebrations and camera cuts.
+The beIN feed keeps a persistent score bug in the top-left corner. We sample
+the two score-digit boxes at 1 fps and classify each digit deterministically
+from its binary shape:
 
-The boxes below are calibrated for the 1920x1080 beIN Sports feed used by the
-ARG-FRA demo and scale with the frame size. OCR is optional: without EasyOCR
-the reader falls back to glyph-only anchors (noisier).
+    one enclosed hole          -> 0
+    no hole, tall/narrow       -> 1
+    no hole, wide              -> 2
+
+(0/1/2 cover the ARG-FRA demo; higher digits would need a template set.)
+A goal is a *sustained* transition to expected+1 (>= 5 consecutive seconds).
+This is far more reliable than OCR on this font, which regularly read a "0"
+as "1" or a "1" as "2" during graphics wipes.
+
+The anchor is placed 3 s before the sustained transition because the score
+bug updates a few seconds after the ball crosses the line.
 """
 from __future__ import annotations
 
 import os
 import subprocess
-from collections import Counter
 from dataclasses import dataclass, asdict
 
 import cv2
@@ -42,13 +48,6 @@ class ScoreAnchor:
         return asdict(self)
 
 
-def _glyph(gray: np.ndarray) -> np.ndarray:
-    """Binary 20x32 glyph signature, stable across compression noise."""
-    mask = (gray > 150).astype(np.float32)
-    mask = cv2.resize(mask, (20, 32), interpolation=cv2.INTER_AREA)
-    return (mask > 0.35).astype(np.uint8)
-
-
 def _boxes_for(width: int, height: int) -> tuple[dict, tuple, tuple]:
     sx, sy = width / 1920.0, height / 1080.0
     boxes = {k: (int(x1 * sx), int(y1 * sy), int(x2 * sx), int(y2 * sy))
@@ -60,56 +59,52 @@ def _boxes_for(width: int, height: int) -> tuple[dict, tuple, tuple]:
     return boxes, clock, crop
 
 
-def _read_digit(reader, crop: np.ndarray) -> int | None:
-    up = cv2.resize(crop, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
-    try:
-        res = reader.readtext(up, allowlist="0123456789", detail=1,
-                              paragraph=False)
-    except Exception:  # noqa: BLE001
-        return None
-    best = None
-    for box, text, conf in res:
-        digits = "".join(ch for ch in text if ch.isdigit())
-        if not digits:
-            continue
-        # the crop is centred on one digit; neighbouring text can leak in at
-        # the edges, so keep the rightmost digit of each OCR result
-        cand = (float(conf), int(digits[-1]))
-        if best is None or cand[0] > best[0]:
-            best = cand
-    return best[1] if best else None
+def classify_digit(crop: np.ndarray) -> int | None:
+    """Classify a white score digit from its binary shape.
 
-
-def _read_clock(reader, crop: np.ndarray) -> float | None:
-    up = cv2.resize(crop, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-    try:
-        res = reader.readtext(up, allowlist="0123456789:", detail=1,
-                              paragraph=False)
-    except Exception:  # noqa: BLE001
+    Returns 0, 1 or 2, or None when the digit is occluded/unreadable.
+    """
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    mask = (gray > 150).astype(np.uint8)
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+    if n <= 1:
         return None
-    text = "".join(t for _b, t, _c in res)
-    digits = "".join(ch for ch in text if ch.isdigit())
-    if len(digits) < 4:
+    # The score-bug border is a long, thin white line; the digit is tall.
+    min_h = max(8, int(0.45 * crop.shape[0]))
+    candidates = [i for i in range(1, n)
+                  if stats[i, cv2.CC_STAT_HEIGHT] >= min_h
+                  and stats[i, cv2.CC_STAT_AREA] >= 20]
+    if not candidates:
         return None
-    # "79:28" or "7928" -> 79 + 28/60
-    mm, ss = int(digits[:-2]), int(digits[-2:])
-    if ss >= 60 or mm > 130:
+    idx = max(candidates, key=lambda i: int(stats[i, cv2.CC_STAT_AREA]))
+    x, y, w, h, area = stats[idx]
+    if area < 25 or h < 12:
         return None
-    return mm + ss / 60.0
+    comp = (labels[y:y + h, x:x + w] == idx).astype(np.uint8)
+    contours, hierarchy = cv2.findContours(
+        comp, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    holes = 0
+    if hierarchy is not None:
+        for k, row in enumerate(hierarchy[0]):
+            if row[3] != -1 and cv2.contourArea(contours[k]) > 8:
+                holes += 1
+    if holes >= 1:
+        return 0
+    # "2" has a wide bottom bar; "1" is a narrow stem (even with its top flag).
+    bottom = comp[int(h * 0.72):, :]
+    bottom_run = max((int(r.sum()) for r in bottom), default=0)
+    return 2 if bottom_run >= 0.55 * w else 1
 
 
 def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
-                       sample_fps: float = 1.0, min_diff: int = 70,
-                       min_gap_s: float = 20.0, use_ocr: bool = True,
+                       sample_fps: float = 1.0,
                        minute_offset: float = 0.0,
-                       start_score: dict | None = None) -> list[ScoreAnchor]:
+                       start_score: dict | None = None,
+                       use_ocr: bool = False, **kwargs) -> list[ScoreAnchor]:
     """Return score-change anchors for the clip, one per goal.
 
-    ``min_diff`` is the glyph-mask Hamming distance that proposes a candidate.
-    OCR then verifies that the changed digit equals the expected score + 1.
-    The expected score is carried forward from ``start_score`` (the score
-    already on the board at ``t0``), so an occluded before-window cannot hide
-    a goal. The two ARG-FRA goals score 99 and 81 against an 18-45 noise band.
+    ``start_score`` is the score already on the board at ``t0``; transitions
+    are matched against it, so an occluded before-window cannot hide a goal.
     """
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
@@ -117,7 +112,7 @@ def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
-    boxes, clock_box, (cx1, cy1, cx2, cy2) = _boxes_for(width, height)
+    boxes, _clock, (cx1, cy1, cx2, cy2) = _boxes_for(width, height)
     cw, ch = cx2 - cx1, cy2 - cy1
     if cw <= 0 or ch <= 0:
         return []
@@ -133,25 +128,18 @@ def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.DEVNULL)
     frame_bytes = cw * ch * 3
-    sigs: list[dict[str, np.ndarray]] = []
-    crops: list[dict[str, np.ndarray]] = []
+    digits: list[dict[str, int | None]] = []
     try:
         while True:
             buf = proc.stdout.read(frame_bytes)
             if len(buf) < frame_bytes:
                 break
             frame = np.frombuffer(buf, np.uint8).reshape(ch, cw, 3)
-            row, crp = {}, {}
+            row = {}
             for side, (x1, y1, x2, y2) in boxes.items():
-                g = cv2.cvtColor(frame[y1 - cy1:y2 - cy1, x1 - cx1:x2 - cx1],
-                                 cv2.COLOR_BGR2GRAY)
-                row[side] = _glyph(g)
-                crp[side] = frame[y1 - cy1:y2 - cy1, x1 - cx1:x2 - cx1].copy()
-            row["clock"] = None
-            x1, y1, x2, y2 = clock_box
-            crp["clock"] = frame[y1 - cy1:y2 - cy1, x1 - cx1:x2 - cx1].copy()
-            sigs.append(row)
-            crops.append(crp)
+                row[side] = classify_digit(
+                    frame[y1 - cy1:y2 - cy1, x1 - cx1:x2 - cx1])
+            digits.append(row)
     finally:
         try:
             proc.stdout.close()
@@ -160,114 +148,33 @@ def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
         proc.kill()
         proc.wait()
 
-    if len(sigs) < 3:
-        return []
-
-    # -- candidates from cheap glyph spikes ----------------------------------
-    cands: list[tuple[int, str]] = []
-    last_i = -10 ** 9
-    sides = ("home", "away")
-    for i in range(1, len(sigs)):
-        diffs = {s: int(np.count_nonzero(sigs[i - 1][s] != sigs[i][s]))
-                 for s in sides}
-        side = max(sides, key=lambda s: diffs[s])
-        if diffs[side] < min_diff:
-            continue
-        lo, hi = max(1, i - 2), min(len(sigs), i + 3)
-        peak = max(int(np.count_nonzero(sigs[j - 1][side] != sigs[j][side]))
-                   for j in range(lo, hi))
-        if diffs[side] < peak:
-            continue
-        gap_frames = int(round(min_gap_s * sample_fps))
-        if i - last_i < gap_frames:
-            continue
-        cands.append((i, side))
-        last_i = i
-
-    # -- OCR confirmation ----------------------------------------------------
-    reader = None
-    if use_ocr:
-        try:
-            import easyocr
-            use_gpu = os.getenv("FC_SCORE_OCR_GPU", "1") != "0"
-            reader = easyocr.Reader(["en"], gpu=use_gpu, verbose=False)
-        except Exception as e:  # noqa: BLE001
-            print(f"      [score] OCR unavailable ({type(e).__name__}); "
-                  "using glyph-only anchors")
-
-    anchors: list[ScoreAnchor] = []
     expected = {"home": 0, "away": 0, **(start_score or {})}
+    state = {s: {"run": 0, "start": None} for s in ("home", "away")}
+    anchors: list[ScoreAnchor] = []
     debug = os.getenv("FC_SCORE_DEBUG") == "1"
-    for i, side in cands:
-        if reader is None:
-            # glyph-only fallback: trust the spike and advance the score
-            before_digit = expected[side]
-            after_digit = before_digit + 1
-            expected[side] = after_digit
-        else:
-            after_pairs = []
-            for j in range(i + 4, min(len(sigs), i + 36)):
-                d = _read_digit(reader, crops[j][side])
-                if d is not None:
-                    after_pairs.append((j, d))
+    for i, row in enumerate(digits):
+        for side in ("home", "away"):
             want = expected[side] + 1
-            best_run = run = 0
-            best_start = run_start = None
-            for j, d in after_pairs:
-                if d == want:
-                    if run == 0:
-                        run_start = j
-                    run += 1
-                    if run > best_run:
-                        best_run, best_start = run, run_start
-                else:
-                    run = 0
-            if debug:
-                print(f"  [score] cand t={t0 + i / sample_fps:.0f} side={side} "
-                      f"expected={expected[side]} want={want} run={best_run} "
-                      f"start={best_start} reads="
-                      f"{Counter(d for _j, d in after_pairs).most_common(4)}")
-            # A real score change holds for many seconds; a single OCR hit
-            # inside a graphics wipe does not. Requiring a sustained run also
-            # fixes anchors that were ~40 s early because the OCR window
-            # merely included the later transition.
-            if best_run < 5:
-                continue
-            if best_start is not None and abs(best_start - i) > 45 * sample_fps:
-                continue
-            other = "away" if side == "home" else "home"
-            oa = [_read_digit(reader, crops[j][other])
-                  for j in range(i + 4, min(len(sigs), i + 36))]
-            oa = [d for d in oa if d is not None]
-            if len(oa) >= 3 and Counter(oa).most_common(1)[0][0] != expected[other]:
-                continue
-            before_digit, after_digit = expected[side], want
-            expected[side] = want
-
-        t = t0 + i / sample_fps
-        minute = None
-        if reader is not None:
-            for j in (i, min(len(sigs) - 1, i + 2), max(0, i - 2)):
-                minute = _read_clock(reader, crops[j]["clock"])
-                if minute is not None:
-                    break
-        if minute is None:
-            minute = t / 60.0 + minute_offset
-        # clock OCR can latch onto a different on-screen number (e.g. a stat
-        # graphic); reject reads far from the video-time estimate
-        est = t / 60.0 + minute_offset
-        if abs(minute - est) > 3.0:
-            minute = est
-        anchors.append(ScoreAnchor(t=t, side=side, minute=int(round(minute)),
-                                   score_before=before_digit,
-                                   score_after=after_digit))
-    if reader is not None:
-        del reader
-        try:
-            import torch
-            torch.cuda.empty_cache()
-        except Exception:  # noqa: BLE001
-            pass
+            if row.get(side) == want:
+                if state[side]["run"] == 0:
+                    state[side]["start"] = i
+                state[side]["run"] += 1
+                if state[side]["run"] >= 5:
+                    start = state[side]["start"]
+                    before, after = expected[side], want
+                    expected[side] = want
+                    state[side] = {"run": 0, "start": None}
+                    t = t0 + max(0.0, start / sample_fps - 3.0)
+                    minute = int(t / 60.0 + minute_offset)
+                    if debug:
+                        print(f"  [score] {t:.0f}s {side} {before}->{after} "
+                              f"(minute {minute})")
+                    anchors.append(ScoreAnchor(
+                        t=t, side=side, minute=minute,
+                        score_before=before, score_after=after))
+            else:
+                state[side] = {"run": 0, "start": None}
+    anchors.sort(key=lambda a: a.t)
     return anchors
 
 

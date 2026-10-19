@@ -53,7 +53,7 @@ _DEFAULT_EXCITEMENT = {"goal": "huge", "shot": "high", "tackle": "medium",
 
 def _clean(text: str) -> str:
     text = text.split("\n")[0]
-    text = text.split("[")[0]  # never leak follow-on markup
+    text = re.sub(r"[\[\]]", " ", text)  # never leak markup
     # Do NOT cut at the first period/exclamation: lines legitimately start
     # with "GOAL!" or "It's in!" followed by the actual sentence. Only trim a
     # genuinely rambling generation at a sentence boundary near the end.
@@ -64,6 +64,13 @@ def _clean(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     text = text.encode("ascii", "ignore").decode()  # drop tokenizer mojibake
     text = re.sub(r"\s+", " ", text).strip()
+    # Keep the spoken line inside the ~10 s clip (and inside one breath).
+    words = text.split()
+    if len(words) > 20:
+        text = " ".join(words[:20]).rstrip(" ,;:")
+        m = re.search(r"^(.*[.!?])(\s|$)", text)
+        if m:
+            text = m.group(1)
     # drop leading dangling conjunctions from mid-sentence starts
     text = re.sub(r"^(and|but|so|which|who)\s+", "", text, flags=re.I)
     if text:
@@ -84,6 +91,8 @@ _BLOCK_NAMES = {
     "qatar", "saudi", "iran", "poland", "denmark", "sweden", "norway",
     "switzerland", "austria", "serbia", "wales", "scotland", "ireland",
     "turkey", "greece", "russia", "ukraine", "romania", "hungary",
+    "argentine", "french", "paris", "london", "madrid", "munich",
+    "turin", "rome", "berlin", "doha",
     "messi", "mbappe", "mbappé", "di maria",
 }
 _BLOCK_CLAIMS = {"penalty", "red card", "yellow card", "offside", "var",
@@ -108,11 +117,20 @@ _EVENT_WORDS = {
 }
 
 
-def _validate(line: str, features: dict, teams: dict, label: str) -> bool:
+def _validate(line: str, features: dict, teams: dict, label: str,
+              team: str = "") -> bool:
     """Reject lines that claim facts the pipeline did not observe."""
     low = line.lower()
     home = (teams.get("home") or "").lower()
     away = (teams.get("away") or "").lower()
+    # Every line must name the team the event belongs to; this is the single
+    # strongest guard against "A moment of magic from Paris" style drift.
+    if team and team.lower() not in low:
+        return False
+    if "]" in line or "[" in line:
+        return False
+    if line.count("!") > 2:
+        return False
     if any(p in low for p in _BLOCK_CLAIMS):
         return False
     for name in _BLOCK_NAMES:
@@ -193,7 +211,7 @@ def event_line(label: str, features: dict, teams: dict,
             line = _clean(gen)
             last_line = line
             n_words = sum(1 for w in line.split() if any(c.isalpha() for c in w))
-            if n_words >= 4 and _validate(line, features, teams, label):
+            if n_words >= 4 and _validate(line, features, teams, label, team):
                 return line, excitement
         except Exception as e:  # noqa: BLE001
             print(f"  [gpt2-lora] generation failed ({type(e).__name__}: {e})")

@@ -86,8 +86,9 @@ def render(video: Path, segments: list[Segment], out_path: Path,
         for i, s in enumerate(voice_segments):
             cmd += ["-i", s.audio_path]
             delay_ms = max(0, int(round(s.t0 * 1000)))
+            # input 0 is the video; TTS inputs start at 1
             fc_parts.append(
-                _voice_chain(i, s) +
+                _voice_chain(i + 1, s) +
                 f",adelay={delay_ms}:all=1[v{i}]")
             labels.append(f"[v{i}]")
     fc_parts.append("".join(labels) +
