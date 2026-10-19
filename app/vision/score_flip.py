@@ -205,16 +205,35 @@ def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
             after_digit = before_digit + 1
             expected[side] = after_digit
         else:
-            after = [_read_digit(reader, crops[j][side])
-                     for j in range(i + 4, min(len(sigs), i + 36))]
-            after = [d for d in after if d is not None]
-            ac = Counter(after).most_common(1)[0] if after else (None, 0)
+            after_pairs = []
+            for j in range(i + 4, min(len(sigs), i + 36)):
+                d = _read_digit(reader, crops[j][side])
+                if d is not None:
+                    after_pairs.append((j, d))
+            want = expected[side] + 1
+            best_run = run = 0
+            best_start = run_start = None
+            for j, d in after_pairs:
+                if d == want:
+                    if run == 0:
+                        run_start = j
+                    run += 1
+                    if run > best_run:
+                        best_run, best_start = run, run_start
+                else:
+                    run = 0
             if debug:
                 print(f"  [score] cand t={t0 + i / sample_fps:.0f} side={side} "
-                      f"expected={expected[side]} after={Counter(after).most_common(4)}")
-            if len(after) < 3 or ac[1] / len(after) < 0.50:
+                      f"expected={expected[side]} want={want} run={best_run} "
+                      f"start={best_start} reads="
+                      f"{Counter(d for _j, d in after_pairs).most_common(4)}")
+            # A real score change holds for many seconds; a single OCR hit
+            # inside a graphics wipe does not. Requiring a sustained run also
+            # fixes anchors that were ~40 s early because the OCR window
+            # merely included the later transition.
+            if best_run < 5:
                 continue
-            if ac[0] != expected[side] + 1:
+            if best_start is not None and abs(best_start - i) > 45 * sample_fps:
                 continue
             other = "away" if side == "home" else "home"
             oa = [_read_digit(reader, crops[j][other])
@@ -222,8 +241,8 @@ def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
             oa = [d for d in oa if d is not None]
             if len(oa) >= 3 and Counter(oa).most_common(1)[0][0] != expected[other]:
                 continue
-            before_digit, after_digit = expected[side], ac[0]
-            expected[side] = after_digit
+            before_digit, after_digit = expected[side], want
+            expected[side] = want
 
         t = t0 + i / sample_fps
         minute = None
