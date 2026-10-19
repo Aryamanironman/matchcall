@@ -108,12 +108,28 @@ async def _one(seg: Segment, out_dir: Path, idx: int, on_done=None) -> Segment:
             return seg
         except Exception as e:  # noqa: BLE001
             if attempt == 2:
-                print(f"  [tts] FAILED seg {idx} ({type(e).__name__}: {e}) — skipped")
-                if on_done:
-                    on_done(seg)
-                return seg
+                print(f"  [tts] edge-tts failed seg {idx} "
+                      f"({type(e).__name__}: {e}) — gTTS fallback")
+                break
             await asyncio.sleep(1.5 * (attempt + 1))
-    return seg
+
+    # --- gTTS (last resort; still a real spoken track) ---
+    try:
+        from gtts import gTTS
+        await asyncio.to_thread(
+            lambda: gTTS(text=seg.text, lang="en").save(str(path)))
+        dur = await asyncio.to_thread(_duration, path)
+        seg.audio_path = str(path)
+        seg.audio_dur = dur
+        if on_done:
+            on_done(seg)
+        return seg
+    except Exception as e:  # noqa: BLE001
+        print(f"  [tts] gTTS also failed seg {idx} "
+              f"({type(e).__name__}: {e}) — skipped")
+        if on_done:
+            on_done(seg)
+        return seg
 
 
 def _duration(path: Path) -> float:

@@ -17,6 +17,11 @@ class Window:
     label: str = "pass"
     conf: float = 0.0
     goal_side: Optional[str] = None    # "home"/"away" when score bug confirmed
+    possession_home: float = -1.0      # fraction of tracked frames, -1 = unknown
+    possession_away: float = -1.0
+    n_tracks: float = 0.0              # mean ByteTrack player tracks
+    ball_y_frac: float = 0.5           # mean ball height in frame
+    corner_time: float = 0.0           # fraction of frames with ball in a corner
 
     def mid(self) -> float:
         return (self.t0 + self.t1) / 2.0

@@ -57,6 +57,20 @@ TEMPLATE: dict[str, list[str]] = {
         "Play settles down, {team} taking a breath.",
         "A quiet spell — {team} content to keep the ball.",
     ],
+    "corner": [
+        "Corner to {team} — the box is packed!",
+        "{team} win a corner. Everyone forward!",
+        "A chance to swing one in for {team}.",
+        "{team} have a corner — the keeper is under pressure!",
+        "The delivery comes in for {team}!",
+    ],
+    "save": [
+        "What a save! The keeper denies {team}!",
+        "Denied! {team} are kept out by a brilliant stop!",
+        "Incredible goalkeeping — {team} can't believe it!",
+        "The keeper stands tall and {team} are frustrated!",
+        "A superb stop to keep {team} out!",
+    ],
 }
 
 FILLER: list[str] = [
@@ -133,7 +147,8 @@ class TemplateAnnouncer:
 
     def event_line(self, label: str, features: dict) -> tuple[str, str]:
         excitement = {"goal": "huge", "shot": "high", "tackle": "medium",
-                      "pass": "low", "dead_time": "calm"}.get(label, "medium")
+                      "pass": "low", "dead_time": "calm",
+                      "corner": "medium", "save": "high"}.get(label, "medium")
         side = features.get("goal_side")
         if side not in ("home", "away"):
             side = "home" if (features.get("ball_x_frac", 0.5) or 0.5) >= 0.5 else "away"
@@ -226,10 +241,19 @@ class Gpt2Announcer:
         self._gpt2 = commentary_gpt2
         self.teams = teams
         self.fallback = TemplateAnnouncer(teams)
+        self.gpt2_lines = 0
+        self.fallback_lines = 0
 
     def event_line(self, label: str, features: dict) -> tuple[str, str]:
-        # grounded path: no model-authored specifics
-        return self.fallback.event_line(label, features)
+        # fine-tuned GPT-2 first; the validator rejects invented facts and
+        # the template announcer is the per-line fallback
+        try:
+            line = self._gpt2.event_line(label, features, self.teams)
+            self.gpt2_lines += 1
+            return line
+        except Exception:  # noqa: BLE001
+            self.fallback_lines += 1
+            return self.fallback.event_line(label, features)
 
     def filler_line(self, features: dict) -> str:
         return self.fallback.filler_line(features)

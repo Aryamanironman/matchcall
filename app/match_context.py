@@ -56,13 +56,17 @@ def possession_word(frac: float) -> str:
 class MatchState:
     """Rolling facts about the match, updated per labeled event."""
 
-    def __init__(self, teams: dict, goals: list[dict] | None = None):
+    def __init__(self, teams: dict, goals: list[dict] | None = None,
+                 start_score: dict | None = None):
         self.teams = teams
         self.home = teams.get("home", "the home side")
         self.away = teams.get("away", "the visitors")
         # goals: [{"t": sec, "team": "home"|"away", "minute": 34, "index": 1}]
         self.goals = sorted(goals or [], key=lambda g: g["t"])
-        self.score = {"home": 0, "away": 0}
+        # score already on the board when the clip starts (e.g. 2-0 at the
+        # beginning of a second-half recording)
+        self.start_score = {"home": 0, "away": 0, **(start_score or {})}
+        self.score = dict(self.start_score)
         self.shots = {"home": 0, "away": 0}
         self.last_event_t: float | None = None
         self.last_event_label: str | None = None
@@ -93,8 +97,10 @@ class MatchState:
         return sum(1 for g in self.goals if g["t"] <= t)
 
     def scoreline_at(self, t: float) -> tuple[int, int]:
-        h = sum(1 for g in self.goals if g["t"] <= t and g["team"] == "home")
-        a = sum(1 for g in self.goals if g["t"] <= t and g["team"] == "away")
+        h = self.start_score["home"] + sum(
+            1 for g in self.goals if g["t"] <= t and g["team"] == "home")
+        a = self.start_score["away"] + sum(
+            1 for g in self.goals if g["t"] <= t and g["team"] == "away")
         return h, a
 
     def phase_at(self, t: float) -> str:
@@ -122,6 +128,14 @@ class MatchState:
         h, a = self.scoreline_at(t)
         phase = self.phase_at(t)
         margin = h - a
+        # Tracker possession is more specific than the ball-x proxy; use it
+        # when the window actually observed tracked players.
+        ph = features.get("possession_home")
+        if ph is not None and float(ph) >= 0.0:
+            possession = "home" if float(ph) >= 0.55 else (
+                "away" if float(ph) <= 0.45 else "even")
+        else:
+            possession = self.possession_side()
         ctx = dict(features or {})
         ctx.update({
             "minute": max(1, int(features.get("minute", self.minute) or self.minute)),
@@ -130,7 +144,7 @@ class MatchState:
             "margin": margin,
             "leader": self.home if margin > 0 else (self.away if margin < 0 else None),
             "phase": phase,
-            "possession": self.possession_side(),
+            "possession": possession,
             "shots_home": self.shots.get("home", 0),
             "shots_away": self.shots.get("away", 0),
             "goals_so_far": self.goals_at(t),

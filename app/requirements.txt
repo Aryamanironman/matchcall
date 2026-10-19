@@ -4,6 +4,23 @@ ultralytics>=8.2
 opencv-python
 pillow
 numpy
-edge-tts
+edge-tts>=7.3.1
+gtts
 google-generativeai
 tqdm
+# FootballVision tracking + team clustering
+scikit-learn
+# score-bug OCR
+easyocr
+# GPT-2 LoRA commentary
+transformers
+peft
+accelerate
+datasets
+# Fish Audio TTS
+httpx
+# web demo
+fastapi
+uvicorn
+python-multipart
+python-dotenv

@@ -17,6 +17,8 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 
+_MODELS_DIR = Path(os.getenv("MODELS_DIR", str(PROJECT_ROOT / "models")))
+
 
 class Settings:
     # LLM
@@ -24,7 +26,7 @@ class Settings:
     gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
     # Paths
-    models_dir: Path = Path(os.getenv("MODELS_DIR", str(PROJECT_ROOT / "models")))
+    models_dir: Path = _MODELS_DIR
     data_dir: Path = Path(os.getenv("DATA_DIR", str(PROJECT_ROOT / "data")))
     out_root: Path = Path(os.getenv("OUTPUT_DIR", str(PROJECT_ROOT / "output")))
 
@@ -50,7 +52,12 @@ class Settings:
     min_gap_for_filler: float = float(os.getenv("MIN_GAP_FOR_FILLER", "25.0"))
     max_commentary_words: int = int(os.getenv("MAX_COMMENTARY_WORDS", "18"))
     gpt2_lora_dir: Path = Path(os.getenv(
-        "GPT2_LORA_DIR", str(PROJECT_ROOT / "models" / "gpt2_lora")))
+        "GPT2_LORA_DIR",
+        str(_MODELS_DIR / ("gpt2_lora_v3"
+                           if (_MODELS_DIR / "gpt2_lora_v3").exists()
+                           else "gpt2_lora_v2"
+                           if (_MODELS_DIR / "gpt2_lora_v2").exists()
+                           else "gpt2_lora"))))
 
     # Devices
     device: str = os.getenv("DEVICE", "0" if os.getenv("FORCE_CPU") != "1" else "cpu")
