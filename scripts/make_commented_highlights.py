@@ -202,13 +202,15 @@ def _describe(kind: str, team: str, minute: int, score: tuple[int, int],
 
 
 def _annotate(rows: list[dict], imgs: list[np.ndarray], out_path: Path,
-              fps: float, home: str, away: str) -> None:
+              fps: float, home: str, away: str,
+              weights_label: str = "") -> None:
     if not imgs:
         return
     h, w = imgs[0].shape[:2]
     writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"),
                              fps, (w, h))
     home_col, away_col = (255, 255, 255), (255, 120, 0)  # BGR
+    trail: list[tuple[int, int]] = []
     for i, (row, img) in enumerate(zip(rows, imgs)):
         frame = img.copy()
         for tid, (bbox, team, side) in row.get("players_tracked", {}).items():
@@ -219,10 +221,32 @@ def _annotate(rows: list[dict], imgs: list[np.ndarray], out_path: Path,
                         cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
         b = row.get("ball")
         if b is not None:
-            cv2.circle(frame, (int(b[0]), int(b[1])), 6, (0, 255, 0), -1)
-            cv2.putText(frame, "ball", (int(b[0]) + 8, int(b[1]) - 6),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1,
+            cx, cy = int(b[0]), int(b[1])
+            interp = bool(row.get("ball_interpolated"))
+            trail.append((cx, cy))
+            trail = trail[-14:]
+            for k in range(1, len(trail)):
+                cv2.line(frame, trail[k - 1], trail[k], (0, 255, 0), 1,
+                         cv2.LINE_AA)
+            if interp:
+                # predicted position from the bounded interpolation: ring
+                cv2.circle(frame, (cx, cy), 8, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.circle(frame, (cx, cy), 2, (0, 255, 0), -1)
+                label = "ball (interp)"
+            else:
+                cv2.circle(frame, (cx, cy), 6, (0, 255, 0), -1)
+                label = "ball"
+            cv2.putText(frame, label, (cx + 9, cy - 7),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 255, 0), 1,
                         cv2.LINE_AA)
+        if weights_label:
+            cv2.putText(frame, weights_label, (10, 24),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.55, (201, 255, 79), 2,
+                        cv2.LINE_AA)
+        cv2.putText(frame, "ball: dot = detected · ring = interpolated",
+                    (10, 46 if weights_label else 24),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (220, 240, 225), 1,
+                    cv2.LINE_AA)
         cv2.putText(frame, f"{home} (white)  vs  {away} (blue)",
                     (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     (255, 255, 255), 1, cv2.LINE_AA)

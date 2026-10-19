@@ -63,6 +63,73 @@ def _player_color(image: np.ndarray, bbox) -> np.ndarray | None:
     return km.cluster_centers_[1 - background].astype(np.float32)
 
 
+def _smooth_ball(raw: list, max_gap: int = 16, width: int = 1920) -> list:
+    """FootballVision-style ball interpolation, bounded and outlier-aware.
+
+    The upstream tracker keeps raw low-confidence ball detections and linearly
+    interpolates the bbox offline (``trackers/tracker.py: ball_interpolation``),
+    with no gap limit. This does the same on centres, but only across gaps of
+    at most ``max_gap`` frames, rejects single-frame teleports, and marks each
+    predicted position so the overlay can draw it differently.
+
+    raw: per-frame ``(cx, cy, score)`` or None
+    ->  per-frame ``(cx, cy, score, interpolated)`` or None
+    """
+    pts = [None if b is None else (float(b[0]), float(b[1]), float(b[2]))
+           for b in raw]
+    n = len(pts)
+    if n == 0:
+        return []
+
+    # A detection far from the midpoint of its neighbours is probably a
+    # spectator/line false positive at low confidence: drop it.
+    jump = max(48.0, 0.18 * max(1, width))
+    for i in range(1, n - 1):
+        p, c, q = pts[i - 1], pts[i], pts[i + 1]
+        if p and c and q:
+            mx, my = (p[0] + q[0]) / 2.0, (p[1] + q[1]) / 2.0
+            if ((c[0] - mx) ** 2 + (c[1] - my) ** 2) ** 0.5 > jump \
+                    and c[2] < 0.4:
+                pts[i] = None
+
+    out = [None] * n
+    for i, p in enumerate(pts):
+        if p is not None:
+            out[i] = (p[0], p[1], p[2], False)
+
+    # internal gaps: linear interpolation, like the repo but bounded
+    i = 0
+    while i < n:
+        if pts[i] is not None:
+            i += 1
+            continue
+        j = i
+        while j < n and pts[j] is None:
+            j += 1
+        prev = pts[i - 1] if i > 0 else None
+        nxt = pts[j] if j < n else None
+        if prev is not None and nxt is not None and (j - i) <= max_gap:
+            span = j - (i - 1)
+            for k in range(i, j):
+                a = (k - (i - 1)) / span
+                out[k] = (prev[0] + (nxt[0] - prev[0]) * a,
+                          prev[1] + (nxt[1] - prev[1]) * a,
+                          min(prev[2], nxt[2]) * 0.85, True)
+        i = j
+
+    # leading / trailing runs: carry the nearest detection for a short span
+    first = next((k for k, p in enumerate(pts) if p is not None), None)
+    last = next((k for k in range(n - 1, -1, -1) if pts[k] is not None),
+                None)
+    if first is not None:
+        for k in range(max(0, first - max_gap), first):
+            out[k] = (pts[first][0], pts[first][1], pts[first][2] * 0.8, True)
+    if last is not None:
+        for k in range(last + 1, min(n, last + 1 + max_gap)):
+            out[k] = (pts[last][0], pts[last][1], pts[last][2] * 0.8, True)
+    return out
+
+
 class FootballVisionTracker:
     """YOLOv5 detector + ByteTrack + team colour clustering + possession."""
 
@@ -202,10 +269,14 @@ class FootballVisionTracker:
 
         team_of, team_side = self._fit_teams(track_colors, track_cx, width)
 
+        # FootballVision-style ball path: raw detections, bounded interpolation
+        # across short gaps, predicted frames flagged for the overlay.
+        ball_path = _smooth_ball([r["ball"] for r in raw], width=width)
+
         out: list[dict] = []
-        for row in raw:
+        for idx, row in enumerate(raw):
             players = row["players"]
-            ball = row["ball"]
+            ball = ball_path[idx] if idx < len(ball_path) else None
             tracked: dict[int, tuple] = {}
             best = None
             for tid, bbox in players.items():
@@ -218,17 +289,19 @@ class FootballVisionTracker:
                 tracked[tid] = (bbox, team, side)
                 if ball is not None:
                     bx, by = ball[0], ball[1]
-                    dx = max(bbox[0] - bx, 0.0, bx - bbox[2])
-                    dy = max(bbox[1] - by, 0.0, by - bbox[3])
-                    dist = (dx * dx + dy * dy) ** 0.5
+                    # FootballVision possession: nearest bottom corner, 70 px
+                    d1 = ((bbox[0] - bx) ** 2 + (bbox[3] - by) ** 2) ** 0.5
+                    d2 = ((bbox[2] - bx) ** 2 + (bbox[3] - by) ** 2) ** 0.5
+                    dist = min(d1, d2)
                     if best is None or dist < best[0]:
                         best = (dist, side)
-            possession = best[1] if (best is not None and best[0] <= 60.0) else None
+            possession = best[1] if (best is not None and best[0] <= 70.0) else None
             out.append({
                 "player": [(x1, y1, x2, y2, 1.0)
                            for (x1, y1, x2, y2) in players.values()],
                 "referee": row["referees"],
-                "ball": ball,
+                "ball": (ball[0], ball[1], ball[2]) if ball is not None else None,
+                "ball_interpolated": bool(ball[3]) if ball is not None else False,
                 "players_tracked": tracked,
                 "possession_side": possession,
             })

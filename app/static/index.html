@@ -3,349 +3,319 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Football Commentary Dubber</title>
-<style>
-  :root {
-    --bg: #0a0e17; --panel: #111827; --panel2: #0d1420; --line: #1f2937;
-    --text: #e5e7eb; --dim: #94a3b8; --green: #22c55e; --accent: #38bdf8;
-    --amber: #fbbf24; --red: #ef4444;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: radial-gradient(1200px 600px at 70% -10%, #14213a 0%, var(--bg) 55%);
-    color: var(--text); min-height: 100vh; padding: 28px 20px 60px;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  }
-  .wrap { max-width: 1080px; margin: 0 auto; }
-  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 24px; }
-  h1 { font-size: 26px; letter-spacing: .5px; }
-  h1 .live-dot { color: var(--green); animation: pulse 1.6s infinite; }
-  @keyframes pulse { 0%,100% {opacity: 1} 50% {opacity: .35} }
-  .sub { color: var(--dim); font-size: 14px; }
-  .grid { display: grid; grid-template-columns: 5fr 7fr; gap: 18px; }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-  .card {
-    background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
-    border: 1px solid var(--line); border-radius: 14px; padding: 20px;
-  }
-  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;
-             color: var(--dim); margin-bottom: 14px; }
-  #drop {
-    border: 2px dashed #2b3b52; border-radius: 12px; padding: 30px 16px;
-    text-align: center; color: var(--dim); cursor: pointer; transition: .15s;
-  }
-  #drop.hover { border-color: var(--accent); background: rgba(56,189,248,.06); }
-  #drop b { color: var(--text); }
-  input[type=file] { display: none; }
-  .row { display: flex; gap: 10px; margin-top: 12px; }
-  .row input {
-    flex: 1; background: #0b1220; border: 1px solid var(--line); color: var(--text);
-    border-radius: 8px; padding: 9px 12px; font-size: 14px; min-width: 0;
-  }
-  .row input:focus { outline: 1px solid var(--accent); }
-  .row2 { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-  .row2 label { font-size: 13px; color: var(--dim); }
-  .row2 input { width: 80px; background: #0b1220; border: 1px solid var(--line);
-                color: var(--text); border-radius: 8px; padding: 8px 10px; }
-  button.go {
-    width: 100%; margin-top: 14px; padding: 12px; border: 0; border-radius: 10px;
-    background: linear-gradient(90deg, #16a34a, #22c55e); color: #04120a;
-    font-weight: 700; font-size: 15px; cursor: pointer; letter-spacing: .4px;
-  }
-  button.go:disabled { opacity: .45; cursor: wait; }
-  button.ghost {
-    background: transparent; border: 1px solid var(--line); color: var(--dim);
-    border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer;
-  }
-  .stage-label { font-size: 13px; color: var(--dim); margin: 14px 0 6px; }
-  .bar { height: 10px; background: #0b1220; border: 1px solid var(--line);
-         border-radius: 99px; overflow: hidden; }
-  .bar > div { height: 100%; width: 0%;
-    background: linear-gradient(90deg, #0ea5e9, #22c55e); transition: width .4s; }
-  #log {
-    background: #060a12; border: 1px solid var(--line); border-radius: 10px;
-    padding: 10px 12px; height: 210px; overflow-y: auto; font: 12px/1.55 ui-monospace,
-    'Cascadia Code', Consolas, monospace; color: #7dd3fc; white-space: pre-wrap;
-    margin-top: 12px;
-  }
-  #log .err { color: var(--red); }
-  #transcript { margin-top: 14px; max-height: 340px; overflow-y: auto; }
-  .tline { padding: 8px 10px; border-left: 3px solid #233246; margin-bottom: 6px;
-           background: rgba(255,255,255,.02); border-radius: 0 8px 8px 0;
-           font-size: 14px; line-height: 1.5; animation: fadein .3s; }
-  @keyframes fadein { from {opacity: 0; transform: translateY(4px)} to {opacity: 1} }
-  .tline .ts { color: var(--green); font-family: ui-monospace, monospace;
-               font-size: 12px; margin-right: 8px; }
-  .tline .tag { font-size: 11px; padding: 1px 7px; border-radius: 99px; margin-right: 8px; }
-  .tag.goal  { background: #7f1d1d; color: #fecaca; }
-  .tag.shot  { background: #78350f; color: #fde68a; }
-  .tag.tackle{ background: #1e3a8a; color: #bfdbfe; }
-  .tag.pass  { background: #14532d; color: #bbf7d0; }
-  .tag.ambience, .tag.dead_time { background: #374151; color: #d1d5db; }
-  #player { width: 100%; border-radius: 10px; margin-top: 12px; background: black;
-            max-height: 430px; }
-  #dl { display: inline-block; margin-top: 12px; color: var(--accent);
-        text-decoration: none; font-size: 14px; }
-  #dl:hover { text-decoration: underline; }
-  .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-  .stat { background: #0b1220; border: 1px solid var(--line); border-radius: 10px;
-          padding: 10px 14px; min-width: 110px; }
-  .stat .v { font-size: 18px; font-weight: 700; color: var(--accent); }
-  .stat .k { font-size: 11px; color: var(--dim); text-transform: uppercase;
-             letter-spacing: 1px; }
-  .empty { color: var(--dim); font-size: 14px; padding: 20px; text-align: center; }
-</style>
+<title>Matchcall — football commentary, end to end</title>
+<meta name="description" content="Five stages, one pass: action spotting, tracking, grounded description, GPT-2 commentary and Fish Audio voice over any football video.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23C9FF4F'/%3E%3Ctext x='16' y='24' font-family='Arial Narrow,Arial' font-size='22' font-weight='700' text-anchor='middle' fill='%2306110C'%3EM%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>⚽ Commentary Dubber <span class="live-dot">●</span></h1>
-    <span class="sub">upload a match clip → AI commentator → dubbed video</span>
-  </header>
 
-  <div class="grid">
-    <div class="card">
-      <h2>1 · Upload</h2>
-      <div id="drop">
-        <b>Drop a video</b> or click to choose<br>
-        <span style="font-size:12px">mp4 / mov / mkv — processed locally on your GPU</span>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Matchcall, by Aryaman">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span class="brand-word">MATCHCALL</span>
+      <span class="brand-by">by Aryaman</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#pipeline">Pipeline</a>
+      <a href="#reel">The reel</a>
+      <a href="#call">Call a match</a>
+      <a href="#training">Training</a>
+    </nav>
+    <span class="status-pill">
+      <span class="dot live" id="statusDot"></span>
+      <span id="statusText">Fish s2.1-pro-free</span>
+    </span>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero wrap">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <h1>Every goal, called the moment it lands.</h1>
+      <p class="lede">Drop in a match. The detector finds the moment, the tracker reads the play, the model writes the line, and Fish says it out loud — one pass.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#reel">Watch the ARG–FRA reel</a>
+        <a class="btn btn-ghost" href="#call">Run it on your match</a>
       </div>
-      <input type="file" id="file" accept="video/*">
-      <div class="row">
-        <input id="home" placeholder="Home team" value="Home">
-        <input id="away" placeholder="Away team" value="Away">
-      </div>
-      <div class="row2">
-        <label>Start</label><input id="t0" type="number" min="0" step="1" value="0">
-        <label>Length (s)</label><input id="dur" type="number" min="0" step="1" placeholder="full">
-        <label class="chk" style="display:flex;align-items:center;gap:6px;margin-left:auto">
-          <input type="checkbox" id="orig" checked> keep crowd noise
-        </label>
-      </div>
-      <button class="go" id="go">Generate commentary</button>
-      <div class="stage-label" id="stageLabel" style="display:none"></div>
-      <div class="bar" id="barWrap" style="display:none"><div id="bar"></div></div>
-      <div id="log" style="display:none"></div>
+      <dl class="hero-stats">
+        <div><dd id="heroMoments">10</dd><dt>moments called</dt></div>
+        <div><dd id="heroGoals">2</dd><dt>goals anchored</dt></div>
+        <div><dd id="heroSeconds">100 s</dd><dt>of commentary</dt></div>
+        <div><dd>1</dd><dt>voice, end to end</dt></div>
+      </dl>
     </div>
 
-    <div class="card">
-      <h2>2 · Result</h2>
-      <div id="resultEmpty" class="empty">Run a job to see the dubbed video and live transcript here.</div>
-      <div id="result" style="display:none">
-      <div id="playerCaption" style="font-size:12px;color:var(--dim);margin-bottom:6px"></div>
-      <video id="player" controls></video>
-        <div class="stats" id="stats"></div>
-        <a id="dl" href="#" download style="display:none">⬇ Download dubbed video</a>
-        <button id="replay" style="display:none;margin-left:8px">↻ Replay with commentary</button>
-        <h2 style="margin-top:18px">Live transcript</h2>
-        <div id="transcript"></div>
-      </div>
+    <div class="pitch-wrap">
+      <svg class="pitch" viewBox="0 0 560 540" role="img" aria-labelledby="pitchTitle">
+        <title id="pitchTitle">The five-stage pipeline, drawn as a football formation: action spotting, tracking, description, commentary and voice.</title>
+        <rect class="pitch-bg" x="1.5" y="1.5" width="557" height="537" rx="20"/>
+        <g class="pitch-line" aria-hidden="true">
+          <line x1="30" y1="270" x2="530" y2="270"/>
+          <circle cx="280" cy="270" r="56"/>
+          <rect x="176" y="1" width="208" height="58"/>
+          <rect x="222" y="1" width="116" height="24"/>
+          <rect x="176" y="481" width="208" height="58"/>
+          <rect x="222" y="515" width="116" height="24"/>
+        </g>
+        <circle class="pitch-dot" cx="280" cy="270" r="2.5" aria-hidden="true"/>
+        <path id="passPath" class="pass-line" d="M280 452 L182 368 L280 276 L390 188 L280 92" aria-hidden="true"/>
+
+        <g class="node">
+          <circle class="node-badge" cx="280" cy="452" r="21" stroke="var(--sky)"/>
+          <text class="node-num" x="280" y="452" fill="var(--sky)">01</text>
+          <text class="node-name start" x="310" y="446">Action spotting</text>
+          <text class="node-model start" x="310" y="460">score-bug + window scan</text>
+        </g>
+        <g class="node">
+          <circle class="node-badge" cx="182" cy="368" r="21" stroke="var(--sky)"/>
+          <text class="node-num" x="182" y="368" fill="var(--sky)">02</text>
+          <text class="node-name" x="182" y="405">Tracking</text>
+          <text class="node-model" x="182" y="418">YOLOv5lu + ByteTrack</text>
+        </g>
+        <g class="node">
+          <circle class="node-badge" cx="280" cy="276" r="21" stroke="var(--lime)"/>
+          <text class="node-num" x="280" y="276" fill="var(--lime)">03</text>
+          <text class="node-name" x="280" y="313">Description</text>
+          <text class="node-model" x="280" y="326">grounded facts</text>
+        </g>
+        <g class="node">
+          <circle class="node-badge" cx="390" cy="188" r="21" stroke="var(--lime)"/>
+          <text class="node-num" x="390" y="188" fill="var(--lime)">04</text>
+          <text class="node-name" x="390" y="225">Commentary</text>
+          <text class="node-model" x="390" y="238">GPT-2 LoRA v3</text>
+        </g>
+        <g class="node">
+          <circle class="node-badge" cx="280" cy="92" r="21" stroke="var(--coral)"/>
+          <text class="node-num" x="280" y="92" fill="var(--coral)">05</text>
+          <text class="node-name" x="280" y="129">Voice</text>
+          <text class="node-model" x="280" y="142">Fish s2.1-pro-free</text>
+        </g>
+
+        <circle class="ball" r="5.5" cx="280" cy="452">
+          <animateMotion dur="3.4s" begin="0.8s" fill="freeze" calcMode="linear">
+            <mpath href="#passPath"/>
+          </animateMotion>
+        </circle>
+      </svg>
+      <p class="pitch-caption">Video in at the back, commentary out up front.</p>
     </div>
   </div>
-</div>
+</section>
 
-<script>
-const $ = id => document.getElementById(id);
-let jobId = null, poll = null, localUrl = null;
+<section class="section wrap" id="pipeline">
+  <div class="section-head">
+    <h2>How a moment becomes a line.</h2>
+    <p class="sub">Two extraction stages, three generation stages. Every stage hands the next one real output.</p>
+  </div>
+  <div class="groups">
+    <div class="group">
+      <div class="group-head"><h3>Visual extraction</h3><span>stages 01–02</span></div>
+      <article class="stage">
+        <div class="stage-num">01</div>
+        <div>
+          <h4>Action spotting</h4>
+          <div class="stage-stack"><span class="chip sky">score-bug OCR</span><span class="chip">YOLO window scan</span><span class="chip">ResNet18</span></div>
+          <p>The broadcast score bug is read until its digits flip; a motion-gated window scan proposes shots, tackles and corners.</p>
+          <div class="stage-out"><span class="pip"></span><b>10 moments</b><span>· goals at 80′ and 81′</span></div>
+        </div>
+      </article>
+      <article class="stage">
+        <div class="stage-num">02</div>
+        <div>
+          <h4>Tracking</h4>
+          <div class="stage-stack"><span class="chip sky">YOLOv5lu</span><span class="chip">ByteTrack</span><span class="chip">ball track</span><span class="chip">KMeans teams</span></div>
+          <p>FootballVision's detector and ByteTrack follow players, referee and ball. Jersey colours split the teams; the smoothed ball drives possession.</p>
+          <div class="stage-out"><span class="pip"></span><b id="pipeTracker">Aryaman YOLOv5lu</b><span>· trained on V1</span></div>
+        </div>
+      </article>
+    </div>
+    <div class="group">
+      <div class="group-head"><h3>Commentary generation</h3><span>stages 03–05</span></div>
+      <article class="stage">
+        <div class="stage-num">03</div>
+        <div>
+          <h4>Grounded description</h4>
+          <div class="stage-stack"><span class="chip hot">team</span><span class="chip hot">minute</span><span class="chip hot">score</span><span class="chip hot">possession</span><span class="chip hot">ball zone</span></div>
+          <p>Each tracked moment becomes a set of facts — team, minute, score, possession, ball zone. Nothing invented.</p>
+          <div class="stage-out"><span class="pip"></span><b>facts only</b><span>· the model's contract</span></div>
+        </div>
+      </article>
+      <article class="stage">
+        <div class="stage-num">04</div>
+        <div>
+          <h4>Textual commentary</h4>
+          <div class="stage-stack"><span class="chip hot">GPT-2</span><span class="chip">LoRA r16</span><span class="chip">validator</span><span class="chip">templates</span></div>
+          <p>The fine-tuned GPT-2 writes the line; a validator rejects invented teams, scores, cards or players. Rejected lines fall back to grounded templates.</p>
+          <div class="stage-out"><span class="pip"></span><b id="pipeGpt2">validator-guarded</b><span id="pipeFallback">· template fallback</span></div>
+        </div>
+      </article>
+      <article class="stage">
+        <div class="stage-num">05</div>
+        <div>
+          <h4>Voice</h4>
+          <div class="stage-stack"><span class="chip coral">Fish s2.1-pro-free</span><span class="chip">edge-tts fallback</span><span class="chip">ffmpeg mix</span></div>
+          <p>Every line is voiced and placed on its timestamp, then mixed under the broadcast crowd. No silent gaps.</p>
+          <div class="stage-out"><span class="pip"></span><b id="pipeVoiced">10 / 10 voiced</b><span>· one pass</span></div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
 
-const drop = $('drop'), fileIn = $('file');
-drop.onclick = () => fileIn.click();
-drop.ondragover = e => { e.preventDefault(); drop.classList.add('hover'); };
-drop.ondragleave = () => drop.classList.remove('hover');
-drop.ondrop = e => {
-  e.preventDefault(); drop.classList.remove('hover');
-  if (e.dataTransfer.files.length) { fileIn.files = e.dataTransfer.files; showFile(); }
-};
-fileIn.onchange = showFile;
-function showFile() {
-  if (fileIn.files.length)
-    drop.innerHTML = `<b>${fileIn.files[0].name}</b><br><span style="font-size:12px">${(fileIn.files[0].size/1e6).toFixed(1)} MB — click to change</span>`;
-}
+<section class="section wrap" id="reel">
+  <div class="section-head">
+    <h2>The reel.</h2>
+    <p class="sub" id="reelSub">Argentina 2–2 France, second half. Ten moments, ten seconds each, voiced by Fish Audio.</p>
+  </div>
+  <div class="reel-grid">
+    <div>
+      <div class="player-card">
+        <div class="matchline">
+          <span class="score">ARG 2 – 2 FRA</span>
+          <span>second half</span>
+          <span class="goal">80′ · 81′</span>
+          <span class="muted" id="reelMeta">10 × 10 s</span>
+        </div>
+        <video id="reelVideo" controls preload="metadata" playsinline>
+          <source src="/media/commented_highlights/commented_highlights.mp4" type="video/mp4">
+        </video>
+        <div class="player-bar">
+          <div class="seg" role="group" aria-label="Choose video">
+            <button id="tabReel" aria-pressed="true">The reel</button>
+            <button id="tabTracking" aria-pressed="false">Tracking overlay</button>
+          </div>
+          <span class="player-note" id="trackingNote">players · ball · teams</span>
+        </div>
+      </div>
+      <div class="reel-stats">
+        <div class="stat"><div class="v" id="statClips">10</div><div class="k">moments</div></div>
+        <div class="stat"><div class="v lime" id="statSeconds">100 s</div><div class="k">reel length</div></div>
+        <div class="stat"><div class="v coral" id="statGoals">2</div><div class="k">goals</div></div>
+        <div class="stat"><div class="v sky">Fish</div><div class="k">s2.1-pro-free</div></div>
+      </div>
+    </div>
+    <aside class="moments">
+      <div class="moments-head"><h3>Moment by moment</h3><span>click to seek</span></div>
+      <div class="moment-list" id="momentList" aria-label="Commentated moments"></div>
+    </aside>
+  </div>
+</section>
 
-$('go').onclick = async () => {
-  if (!fileIn.files.length) { alert('choose a video first'); return; }
-  const fd = new FormData();
-  fd.append('file', fileIn.files[0]);
-  fd.append('home', $('home').value || 'Home');
-  fd.append('away', $('away').value || 'Away');
-  fd.append('t0', $('t0').value || 0);
-  fd.append('dur', $('dur').value || '');
-  fd.append('orig_audio', $('orig').checked);
-  $('go').disabled = true; $('go').textContent = 'Processing…';
-  $('log').style.display = 'block'; $('log').textContent = '';
-  $('barWrap').style.display = 'block'; $('bar').style.width = '0%';
-  $('stageLabel').style.display = 'block';
-  // LIVE mode: the original clip plays NOW; commentary lines stream in over SSE
-  // and are spoken at their timestamps, exactly like a live broadcast.
-  stopLive();
-  if (localUrl) URL.revokeObjectURL(localUrl);
-  localUrl = URL.createObjectURL(fileIn.files[0]);
-  $('player').src = localUrl;
-  $('resultEmpty').style.display = 'none';
-  $('result').style.display = 'block';
-  $('playerCaption').textContent = '● LIVE — commentary is generated and spoken as the clip plays';
-  $('player').play().catch(() => {});
-  try {
-    const r = await fetch('/api/upload', { method: 'POST', body: fd });
-    if (!r.ok) throw new Error(await r.text());
-    ({ job_id: jobId } = await r.json());
-    poll = setInterval(tick, 1500);
-    startLive();
-  } catch (err) {
-    $('playerCaption').textContent = '✘ upload failed — fix and retry (video stays playable locally)';
-    alert('upload failed: ' + err.message); resetBtn();
-  }
-};
+<section class="section wrap" id="call">
+  <div class="section-head">
+    <h2>Call your match.</h2>
+    <p class="sub">Any football video. Set the score and clock at the start; the pipeline runs locally on your GPU.</p>
+  </div>
+  <div class="call-grid">
+    <form class="panel" id="callForm">
+      <h3>New run</h3>
+      <p class="hint">A 90-second clip takes about a minute on the GPU.</p>
+      <div id="drop" role="button" tabindex="0" aria-label="Choose a video file">
+        <b>Drop a match video</b>
+        <span>or click to choose · mp4 / mov / mkv</span>
+      </div>
+      <input type="file" id="file" accept="video/*" hidden>
+      <div class="field-grid">
+        <div class="field"><label for="home">Home team</label><input id="home" placeholder="Argentina"></div>
+        <div class="field"><label for="away">Away team</label><input id="away" placeholder="France"></div>
+        <div class="field"><label for="scoreHome">Home score at start</label><input id="scoreHome" type="number" min="0" step="1" value="0"></div>
+        <div class="field"><label for="scoreAway">Away score at start</label><input id="scoreAway" type="number" min="0" step="1" value="0"></div>
+        <div class="field"><label for="minuteOffset">Broadcast minute at start</label><input id="minuteOffset" type="number" min="0" step="0.01" value="0"></div>
+        <div class="field"><label for="t0">Start (s)</label><input id="t0" type="number" min="0" step="1" value="0"></div>
+        <div class="field"><label for="dur">Length (s, blank = full)</label><input id="dur" type="number" min="0" step="1" value="90"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="orig" checked> Keep the broadcast crowd under the commentary</label>
+      <button class="btn btn-primary" id="go" type="submit">Call it</button>
+    </form>
 
-function resetBtn() {
-  $('go').disabled = false; $('go').textContent = 'Generate commentary';
-}
+    <div class="panel">
+      <div class="rail" id="rail" aria-label="Pipeline progress">
+        <div class="rail-step" data-step="0"><span class="n">01</span><span>Action spotting</span><span class="state">waiting</span></div>
+        <div class="rail-step" data-step="1"><span class="n">02</span><span>Tracking</span><span class="state">waiting</span></div>
+        <div class="rail-step" data-step="2"><span class="n">03</span><span>Grounded description</span><span class="state">waiting</span></div>
+        <div class="rail-step" data-step="3"><span class="n">04</span><span>Commentary</span><span class="state">waiting</span></div>
+        <div class="rail-step" data-step="4"><span class="n">05</span><span>Voice</span><span class="state">waiting</span></div>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="run-msg" id="runMsg">Ready when you are.</div>
+      <pre class="logbox" id="log" hidden></pre>
+      <div class="live-cap" id="liveCap" hidden><span class="dot"></span><span id="liveText"></span></div>
+      <div id="result" hidden>
+        <video id="outVideo" controls playsinline style="width:100%;border-radius:8px;margin-top:12px"></video>
+        <div class="result-stats" id="runStats"></div>
+        <a class="dl" id="download" href="#" download>Download the dubbed clip</a>
+        <div class="transcript" id="transcript"></div>
+      </div>
+      <div class="empty" id="runEmpty">The run log, live commentary and finished clip appear here.</div>
+    </div>
+  </div>
+</section>
 
-function esc(s) {
-  return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-}
+<section class="section wrap" id="training">
+  <div class="section-head">
+    <h2>Training &amp; ClearML.</h2>
+    <p class="sub">Every run is a ClearML task: parameters, dataset, metrics, plots and the registered model.</p>
+  </div>
+  <div class="clearml-bar">
+    <span>ClearML project <a href="https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8" target="_blank" rel="noopener">Football Commentator</a></span>
+    <span class="sep">/</span>
+    <span id="trainStatus">Reading training state…</span>
+  </div>
+  <div class="train-grid">
+    <div class="model-card" id="yoloCard">
+      <div class="model-head">
+        <div><h3>Aryaman YOLOv5lu</h3><div class="meta">FootballVision architecture · V1 fine-tune · 3 classes</div></div>
+        <span class="badge live" id="yoloBadge">starting</span>
+      </div>
+      <div class="metric-row" id="yoloMetrics"></div>
+      <div class="charts">
+        <figure class="chart" id="lossChart"></figure>
+        <figure class="chart" id="mapChart"></figure>
+      </div>
+      <div class="asset-grid" id="yoloAssets"></div>
+      <details class="logs"><summary>Training log</summary><pre class="logbox small" id="yoloLog"></pre></details>
+      <div class="train-links" id="yoloLinks"></div>
+    </div>
 
-async function tick() {
-  try {
-    const r = await fetch('/api/job/' + jobId);
-    if (r.status === 404) { clearInterval(poll); resetBtn(); return; }
-    const j = await r.json();
-    $('bar').style.width = (j.progress * 100).toFixed(1) + '%';
-    $('stageLabel').textContent = `Stage: ${j.stage} — ${j.message || ''}`;
-    const log = $('log');
-    log.textContent = j.log.join('\n');
-    log.scrollTop = log.scrollHeight;
-    const lines = j.log.filter(l => l.startsWith('ERROR'));
-    if (lines.length) lines.forEach(l => log.insertAdjacentHTML('beforeend', `<div class="err">${esc(l)}</div>`));
+    <div class="model-card" id="llmCard">
+      <div class="model-head">
+        <div><h3>GPT-2 LoRA v3</h3><div class="meta">completion-only loss · rank 16 · grounded corpus</div></div>
+        <span class="badge done" id="llmBadge">done</span>
+      </div>
+      <div class="metric-row" id="llmMetrics"></div>
+      <figure class="chart" id="llmChart"></figure>
+      <div class="note" id="llmNote"></div>
+      <div class="train-links" id="llmLinks"></div>
+    </div>
+  </div>
+  <table class="ledger" id="clearmlTable" hidden></table>
+  <div class="report-cta">
+    <p><b>The full report.</b> Training curves, ClearML links, logs, the pipeline and the reel in one page.</p>
+    <a class="btn btn-ghost" href="/media/Aryaman_Football_AI_Report.html" target="_blank" rel="noopener">Open the report</a>
+  </div>
+</section>
 
-    // transcript
-    const tr = $('transcript');
-    if (j.transcript && j.transcript.length) {
-      $('resultEmpty').style.display = 'none';
-      $('result').style.display = 'block';
-      tr.innerHTML = j.transcript.map(t => {
-        const m = t.match(/^\[(\d+:\d+)\] \(([^|)]+)\s*\|\s*([^)]+)\)\s*(.*)$/);
-        if (!m) return `<div class="tline">${esc(t)}</div>`;
-        const [, ts, tag, exc, text] = m;
-        return `<div class="tline"><span class="ts">${ts}</span><span class="tag ${tag}">${tag}${tag !== exc ? ' · ' + exc : ''}</span>${esc(text)}</div>`;
-      }).join('');
-      tr.scrollTop = tr.scrollHeight;
-    }
+</main>
 
-    if (j.status === 'done' && j.video_url) {
-      clearInterval(poll);
-      $('dl').href = j.video_url;
-      $('dl').style.display = 'inline-block';
-      $('replay').style.display = 'inline-block';
-      $('playerCaption').textContent = allSegs.length
-        ? '✔ complete — dubbed MP4 ready to download, or ↻ replay the full live session'
-        : '✔ complete — dubbed MP4 ready to download';
-      $('stageLabel').textContent = 'Done — final video ready';
-      if (j.result) {
-        const s = j.result;
-        $('stats').innerHTML =
-          stat('clip', fmtDur(s.clip_duration_s)) + stat('lines', s.segments) +
-          stat('speech', fmtDur(s.speech_seconds)) +
-          stat('speed', s.realtime_ratio + '× realtime') +
-          (s.net_classifier_used ? stat('classifier', 'ResNet18') : '');
-      }
-      resetBtn();
-    }
-    if (j.status === 'error' || j.status === 'cancelled') {
-      clearInterval(poll);
-      $('stageLabel').textContent = j.status === 'error' ? ('Failed: ' + j.error) : 'Cancelled';
-      stopLive();
-      resetBtn();
-    }
-  } catch (e) { /* transient poll error — keep trying */ }
-}
+<footer class="footer">
+  <div class="wrap">
+    <span>Matchcall — built by Aryaman · 2026</span>
+    <div class="links">
+      <a href="https://github.com/mserra0/FootballVision" target="_blank" rel="noopener">FootballVision</a>
+      <a href="https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8" target="_blank" rel="noopener">ClearML</a>
+      <a href="https://fish.audio" target="_blank" rel="noopener">Fish Audio</a>
+      <a href="#top">Back to top</a>
+    </div>
+  </div>
+</footer>
 
-/* ---- live commentary: SSE + timestamp scheduler ---- */
-let liveES = null, liveQueue = [], liveTimer = null;
-
-function startLive() {
-  liveES = new EventSource(`/api/job/${jobId}/live`);
-  liveES.onmessage = e => {
-    liveQueue.push(JSON.parse(e.data));
-    if (!liveTimer) liveTimer = setInterval(pumpLive, 250);
-  };
-  liveES.addEventListener('end', () => { liveES?.close(); liveES = null; });
-}
-
-function pumpLive() {
-  const now = $('player').currentTime;
-  liveQueue = liveQueue.filter(seg => {
-    if (now >= seg.t0 - 0.15) {
-      if (now - seg.t0 < 6) playSeg(seg);   // speak it (slightly late is fine)
-      return false;                          // else: too far past — replay button covers it
-    }
-    return true;
-  });
-  if (!liveQueue.length && !liveES) { clearInterval(liveTimer); liveTimer = null; }
-}
-
-function playSeg(seg) {
-  const a = new Audio(seg.audio_url);
-  a.play().catch(() => {});
-  const ts = fmtDur(seg.t0);
-  const cap = $('playerCaption');
-  cap.textContent = `🔊 [${ts}] ${seg.text}`;
-  a.onended = () => { if (cap.textContent.startsWith('🔊')) cap.textContent = '● LIVE — commentary is generated and spoken as the clip plays'; };
-}
-
-function stopLive() {
-  liveES?.close(); liveES = null;
-  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
-  liveQueue = [];
-}
-
-// once the job finishes, offer a clean from-0 replay with all collected lines
-$('replay').onclick = () => {
-  stopLive();
-  liveQueue = allSegs.slice();
-  liveTimer = setInterval(pumpLive, 250);
-  $('player').currentTime = 0;
-  $('player').play().catch(() => {});
-  $('playerCaption').textContent = '● replay — full commentary, in sync';
-};
-let allSegs = [];
-const _origPlaySeg = playSeg;
-playSeg = function (seg, record = true) {
-  if (record) allSegs.push(seg);
-  _origPlaySeg(seg);
-};
-
-$('player').addEventListener('ended', stopLive);
-
-// attach to an existing job via ?job=<id> (e.g. a job started server-side):
-// streams the original from the server and goes live on its commentary
-const urlJob = new URLSearchParams(location.search).get('job');
-if (urlJob) {
-  jobId = urlJob;
-  (async () => {
-    try {
-      const j = await (await fetch('/api/job/' + jobId)).json();
-      if (j.file) {
-        $('player').src = '/media/uploads/' + encodeURIComponent(j.file);
-        $('resultEmpty').style.display = 'none';
-        $('result').style.display = 'block';
-        $('playerCaption').textContent = '● LIVE (attached) — commentary is generated and spoken as the clip plays';
-        $('player').play().catch(() => {});
-      }
-      $('go').disabled = true; $('go').textContent = 'Processing…';
-      $('log').style.display = 'block'; $('barWrap').style.display = 'block';
-      $('stageLabel').style.display = 'block';
-      poll = setInterval(tick, 1500);
-      startLive();
-    } catch (e) { alert('cannot attach to job ' + jobId); }
-  })();
-}
-
-function stat(k, v) { return `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`; }
-function fmtDur(s) {
-  s = Math.round(s || 0);
-  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-}
-</script>
+<script src="/app.js" defer></script>
 </body>
 </html>
