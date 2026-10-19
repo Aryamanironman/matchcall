@@ -26,6 +26,7 @@ from app.vision.audio import audio_evidence
 
 GOAL_CAP = 6       # a match has 0-6 goals; accept at most that many
 SHOT_CAP = 24      # ~top 24 chances max, even in a chaotic game
+CORNER_CAP = 16    # corners are frequent; keep the strongest ones only
 # Calibrated on real broadcast lulls vs the goal-laden slice of this feed:
 # quiet passages top out at ~155 px/s ball speed, genuine strikes run 147-315.
 BALL_SPEED_SHOT = 140.0
@@ -43,6 +44,7 @@ def enforce_caps(windows: list[Window], rise=None, clip_t0: float = 0.0) -> None
     """Keep only the strongest GOAL_CAP / SHOT_CAP candidates; demote the rest."""
     goals = [w for w in windows if w.label == "goal"]
     shots = [w for w in windows if w.label == "shot"]
+    corners = [w for w in windows if w.label == "corner"]
 
     def gscore(w: Window) -> float:
         return (w.goal_zone_time * 2.0 + w.has_ball
@@ -52,9 +54,14 @@ def enforce_caps(windows: list[Window], rise=None, clip_t0: float = 0.0) -> None
         return (w.ball_speed / 1000.0 + w.goal_zone_time * 1.5
                 + max(0.0, _aud_ev(rise, w.mid(), clip_t0) - 1.0))
 
+    def cscore(w: Window) -> float:
+        return w.corner_time * 2.0 + w.has_ball + w.motion / 100.0
+
     for w in sorted(goals, key=gscore)[GOAL_CAP:]:
         w.label, w.conf = "pass", 0.4
     for w in sorted(shots, key=sscore)[SHOT_CAP:]:
+        w.label, w.conf = "pass", 0.4
+    for w in sorted(corners, key=cscore)[CORNER_CAP:]:
         w.label, w.conf = "pass", 0.4
 
 
@@ -100,6 +107,9 @@ def label_windows(windows: list[Window], rise=None, clip_t0: float = 0.0,
               and (zone >= 0.05 or w.has_ball >= 0.2)
               and (not audio_usable or roar >= ROAR_FLOOR)):
             w.label, w.conf = "shot", min(0.8, 0.5 + zone)
+        elif w.corner_time >= 0.30 and w.has_ball >= 0.20 and w.motion >= gate:
+            # ball camping in a corner with the box populated -> corner
+            w.label, w.conf = "corner", min(0.75, 0.45 + w.corner_time)
         elif w.motion >= m_hi and w.ball_speed < BALL_SPEED_SHOT * 0.5 \
                 and w.n_players >= 6:
             w.label, w.conf = "tackle", 0.55

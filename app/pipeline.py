@@ -18,9 +18,10 @@ from app.events import Segment, Window
 from app.vision.sampling import probe_video, has_audio
 from app.vision.audio import audio_rms_profile, crowd_rise, audio_evidence
 from app.vision.detector import FootballDetector
+from app.vision.fv_tracker import make_detector
 from app.vision.analyze import analyze_video
 from app.vision.auto_label import (label_windows, merge_events, enforce_caps,
-                                   ROAR_FLOOR, BALL_SPEED_SHOT)
+                                   ROAR_FLOOR, ROAR_STRIKE, BALL_SPEED_SHOT)
 from app.vision import event_net
 from app.commentary import make_announcer
 from app.duo import Duo, CHAT_GAP
@@ -37,6 +38,8 @@ def _fmt_ts(t: float) -> str:
 def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
                  duration: float | None = None, out_dir: Path | None = None,
                  orig_audio: bool = True,
+                 start_score: dict | None = None,
+                 minute_offset: float = 0.0,
                  progress=None, on_transcript=None, on_segment=None,
                  _cancel_check=None) -> dict:
     progress = progress or (lambda stage, frac, msg="": None)
@@ -56,7 +59,7 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
     dur = duration or max(0.0, info["duration"] - t0)
 
     progress("sampling", 0.04, f"extracting {dur:.0f}s @ {settings.analysis_fps}fps proxy frames")
-    detector = FootballDetector()
+    detector = make_detector()
 
     # crowd-energy profile: goals are confirmed by a crowd surge in ANY feed,
     # vision alone over-fires on every attack (feeds are loudness-normalized,
@@ -66,27 +69,42 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
     rise = crowd_rise(rms) if len(rms) else None
     audio_usable = len(rms) >= 30 and float(np.median(rms)) > 0.0
 
-    # gold goal anchors from the broadcast score bug (when calibrated): the
-    # bug flips exactly on goals, survives replays/celebration cuts, and
-    # names the scoring side — outranks every heuristic
+    # gold goal anchors from the broadcast score bug: the bug flips exactly
+    # on goals, survives replays/celebration cuts, and names the scoring
+    # side. The glyph reader needs no calibration; the older brightness
+    # reader remains a fallback when a calibration file exists.
     anchors: list[dict] = []
     try:
-        from app.vision import score_bug
-        import app.config as _cfg
-        calib_path = Path(os.getenv("SCORE_BUG_CALIB", "")) \
-            if os.getenv("SCORE_BUG_CALIB") else \
-            settings.models_dir / "score_bug_calibration.json"
-        calib = score_bug.load_calibration(calib_path)
-        if calib:
-            box_home, box_away = calib
-            progress("sampling", 0.06, "reading score-bug digit regions")
-            anchors = [a.to_dict() for a in score_bug.detect_goal_anchors(
-                str(video), box_home, box_away, t0=t0, duration=dur)]
-            _cfg.SCORE_ANCHORS[:] = anchors
+        from app.vision.score_flip import detect_score_flips
+        progress("sampling", 0.06, "reading score-bug digits")
+        anchors = [a.to_dict() for a in detect_score_flips(
+            video, t0=t0, duration=dur, minute_offset=minute_offset,
+            start_score=start_score)]
+        _cfg.SCORE_ANCHORS[:] = anchors
+        if anchors:
             print(f"      score bug: {len(anchors)} goal anchor(s) "
                   f"{[a['side'] + ' ' + _fmt_ts(a['t']) for a in anchors]}")
     except Exception as sb_err:  # noqa: BLE001 - bug reading is optional gold
-        print(f"      score-bug pass skipped: {type(sb_err).__name__}: {sb_err}")
+        print(f"      score-bug flip pass skipped: {type(sb_err).__name__}: {sb_err}")
+    if not anchors:
+        try:
+            from app.vision import score_bug
+            calib_path = Path(os.getenv("SCORE_BUG_CALIB", "")) \
+                if os.getenv("SCORE_BUG_CALIB") else \
+                settings.models_dir / "score_bug_calibration.json"
+            calib = score_bug.load_calibration(calib_path)
+            if calib:
+                box_home, box_away = calib
+                anchors = [a.to_dict() for a in score_bug.detect_goal_anchors(
+                    str(video), box_home, box_away, t0=t0, duration=dur)]
+                for a in anchors:
+                    if not a.get("minute"):
+                        a["minute"] = int(round(a["t"] / 60.0 + minute_offset))
+                _cfg.SCORE_ANCHORS[:] = anchors
+                print(f"      score bug (calibrated): {len(anchors)} anchor(s)")
+        except Exception as sb_err:  # noqa: BLE001
+            print(f"      calibrated score-bug pass skipped: "
+                  f"{type(sb_err).__name__}: {sb_err}")
 
     analysis = analyze_video(
         video, work, detector, t0=t0, duration=dur,
@@ -140,9 +158,14 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
                 elif (w.ball_speed >= BALL_SPEED_SHOT
                       and roar is not None and roar >= ROAR_STRIKE):
                     w.label, w.conf = "goal", 0.6 + 0.3 * w.net_conf
-            elif w.net_label == "shot" and w.ball_speed >= BALL_SPEED_SHOT \
-                    and (roar is None or roar >= ROAR_FLOOR):
-                w.label, w.conf = "shot", 0.6 + 0.2 * w.net_conf
+            elif w.net_label == "shot":
+                # The tracker loses the ball on broadcast cuts, so ball_speed
+                # alone rejects real chances (the ARG-FRA goals had ResNet
+                # shot confidence 0.89-0.99 with ball_speed 0-120).
+                strong = w.net_conf >= 0.80
+                if (w.ball_speed >= BALL_SPEED_SHOT or strong) and \
+                        (roar is None or roar >= ROAR_FLOOR or strong):
+                    w.label, w.conf = "shot", max(0.6, 0.6 + 0.2 * w.net_conf)
         enforce_caps(windows, rise, t0)
     events_final = merge_events(windows)
 
@@ -155,7 +178,8 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
     goals_for_state = [{"t": a["t"], "team": a.get("side", "home"),
                         "minute": a.get("minute", int(a["t"] // 60)),
                         "index": i + 1} for i, a in enumerate(anchors)]
-    mstate = MatchState(teams, goals=goals_for_state)
+    mstate = MatchState(teams, goals=goals_for_state,
+                        start_score=start_score)
     segments: list[Segment] = []
     for ev in events_final:
         feats = {
@@ -164,7 +188,10 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
             "goal_zone_time": ev.goal_zone_time,
             "ball_x_frac": getattr(ev, "ball_x_frac", 0.5),
             "goal_side": getattr(ev, "goal_side", None),
-            "minute": ev.t0 / 60.0, "t0": ev.t0,
+            "possession_home": getattr(ev, "possession_home", -1.0),
+            "possession_away": getattr(ev, "possession_away", -1.0),
+            "n_tracks": getattr(ev, "n_tracks", 0.0),
+            "minute": ev.t0 / 60.0 + minute_offset, "t0": ev.t0,
             "crowd_rise": audio_evidence(rise, ev.mid() - t0)
             if rise is not None else 1.0,
         }
@@ -186,7 +213,10 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
         w = windows[i]
         raw = {"motion": w.motion, "ball_speed": w.ball_speed,
                "n_players": w.n_players, "has_ball": w.has_ball,
-               "goal_zone_time": w.goal_zone_time, "ball_x_frac": 0.5}
+               "goal_zone_time": w.goal_zone_time, "ball_x_frac": 0.5,
+               "possession_home": getattr(w, "possession_home", -1.0),
+               "possession_away": getattr(w, "possession_away", -1.0),
+               "n_tracks": getattr(w, "n_tracks", 0.0)}
         return mstate.context_at(t + t0, raw)
 
     def transcript_lines(segs: list[Segment]) -> list[str]:

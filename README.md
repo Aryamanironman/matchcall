@@ -1,16 +1,104 @@
 # Football Commentary Dubber
 
 AI play-by-play commentary over real football footage. Drop in a broadcast MP4,
-get back the same clip with an energetic commentator dubbed on top.
+get back the same clip with an energetic commentator dubbed on top — or a
+10-second-per-moment commented highlights reel.
 
 ```
-video ─▶ motion-gated sampling ─▶ YOLOv8 (player/ball/referee)
-      ─▶ auto-label (weak supervision) ─▶ ResNet18 event classifier
-      ─▶ commentary (fine-tuned GPT-2 LoRA / Gemini / templates) ─▶ filler engine
-      ─▶ edge-tts voice ─▶ ffmpeg mix (ducked crowd audio bed)
+video ─▶ action spotting (score-bug OCR + YOLO/ResNet)
+      ─▶ 10 s key-action clips
+      ─▶ FootballVision tracking (yolov5su + ByteTrack + team possession)
+      ─▶ grounded action description
+      ─▶ GPT-2 LoRA commentary (validated, template fallback)
+      ─▶ Fish Audio s2.1-pro-free / edge-tts
+      ─▶ commented highlights reel
 ```
 
-Events detected: **goal, shot, tackle, pass, dead_time**.
+Events detected: **goal, shot, tackle, pass, corner, dead_time**.
+
+## Commented highlights (the 5-stage pipeline)
+
+```powershell
+# ARG-FRA 2022 second half; score is 2-0 at t=0 and the broadcast clock is 34:38
+.venv\Scripts\python scripts\make_commented_highlights.py `
+  --video "C:\Users\asus\Downloads\3 - 3 ARG vs FRA - Second-Half - Bein.mp4" `
+  --home Argentina --away France `
+  --start-score-home 2 --start-score-away 0 --minute-offset 34.63
+```
+
+Outputs in `output/commented_highlights/`:
+
+| file | what |
+|---|---|
+| `commented_highlights.mp4` | the reel (10 s per selected moment) |
+| `annotated_goal.mp4` | tracking overlay (players, teams, ball, IDs) |
+| `highlights.json` | moments, score anchors, descriptions, commentary, timings |
+| `transcript.txt` | minute-by-minute commentary lines |
+| `score_anchors.json` | score-bug goal evidence |
+
+Stages map to the code:
+
+1. **Action spotting** — `app/vision/score_flip.py` (score-bug glyph spikes +
+   EasyOCR confirmation + broadcast clock) and `app/vision/analyze.py`
+   (project YOLO + ResNet window scan).
+2. **Tracking / visual enrichment** — `app/vision/fv_tracker.py` uses the
+   FootballVision checkpoint (`models/footballvision/yolov5su_best.pt`) with
+   ultralytics ByteTrack, KMeans jersey-colour teams and ball possession.
+3. **Action description** — grounded facts (team, minute, score, possession,
+   ball zone, tracked players) built in `scripts/make_commented_highlights.py`.
+4. **Textual commentary** — `app/commentary_gpt2.py` (LoRA) with a validator
+   that rejects invented teams, scores, cards or player names; templates are
+   the per-line fallback.
+5. **Audio commentary** — `app/tts.py` (Fish Audio `s2.1-pro-free` when
+   `FISH_API_KEY` is real, edge-tts otherwise).
+
+### Score-bug calibration
+
+The reader is calibrated for the 1920x1080 beIN score bug. Boxes live in
+`app/vision/score_flip.py`; they scale with the frame. If you change
+broadcaster, update `BEIN_1080_BOXES` and `BEIN_1080_CLOCK`. The score already
+on the board at `t0` must be passed with `--start-score-home/away`; the
+broadcast match-minute at `t0` with `--minute-offset`.
+
+### GPT-2 LoRA
+
+`models/gpt2_lora_v3/` is trained on a grounded corpus
+(`scripts/build_commentary_corpus.py`, 6k examples) with completion-only loss,
+so the adapter learns the `[EVENT] -> [COMMENTARY]` mapping rather than the
+deterministic history tokens. Retrain with:
+
+```powershell
+.venv\Scripts\python scripts\build_commentary_corpus.py --limit 6000
+.venv\Scripts\python scripts\train_commentator_lora.py `
+  --data data\commentator_train_v2.jsonl --out models\gpt2_lora_v3 --epochs 3
+```
+
+### Fish Audio
+
+Put a real key in `.env`:
+
+```
+FISH_API_KEY=sk-fish-...
+FISH_MODEL=s2.1-pro-free
+FISH_VOICE_ID=40f53434437e46a5bcbb5abb39f5079c
+```
+
+`***` is treated as missing; the pipeline falls back to edge-tts and says so.
+As soon as the key is set, re-run the reel to re-voice every line with
+`s2.1-pro-free` — no other change.
+
+## Full-match dub
+
+```powershell
+.venv\Scripts\python -m app.cli --video "match.mp4" --home Argentina --away France `
+  --score-home 2 --score-away 0 --minute-offset 34.63
+```
+
+The whole-match action-spotting pass uses the project YOLOv8 model by default
+(fast). Set `FC_DETECTOR=footballvision` to use the FootballVision checkpoint
+for the full scan too; the highlights script always uses FootballVision for
+the 10-second clip tracking.
+
 
 ## Setup (Windows, CUDA GPU)
 

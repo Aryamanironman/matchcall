@@ -59,10 +59,19 @@ def analyze_video(video: Path, work_dir: Path, detector: FootballDetector,
     n = len(frames)
     ball_x = np.full(n, np.nan); ball_y = np.full(n, np.nan)
     has_ball = np.zeros(n); n_players = np.zeros(n)
-    in_goal_zone = np.zeros(n)
+    in_goal_zone = np.zeros(n); in_corner = np.zeros(n)
+    poss_home = np.full(n, np.nan); poss_away = np.full(n, np.nan)
+    n_tracks = np.zeros(n)
     for k, i in enumerate(sched_ok):
         d = dets[k]
         n_players[i] = len(d["player"]) + len(d["referee"])
+        tracked = d.get("players_tracked") or {}
+        n_tracks[i] = len(tracked)
+        side = d.get("possession_side")
+        if side == "home":
+            poss_home[i], poss_away[i] = 1.0, 0.0
+        elif side == "away":
+            poss_home[i], poss_away[i] = 0.0, 1.0
         if d["ball"] is not None:
             has_ball[i] = 1
             cx, cy, _ = d["ball"]
@@ -71,6 +80,8 @@ def analyze_video(video: Path, work_dir: Path, detector: FootballDetector,
             ball_x[i] = fx; ball_y[i] = fy
             if any(_in_zone(fx, fy, z) for z in zones):
                 in_goal_zone[i] = 1
+            if (fx <= 0.08 or fx >= 0.92) and fy >= 0.60:
+                in_corner[i] = 1
 
     # ball speed (px/s in analysis-res space): measured between consecutive
     # DETECTED frames with their real dt. The detector schedule is sparse, so
@@ -103,6 +114,7 @@ def analyze_video(video: Path, work_dir: Path, detector: FootballDetector,
         e = min(s + win_frames, n)
         if e - s < win_frames * 0.4:
             break
+        ph = poss_home[s:e]; pa = poss_away[s:e]; by = ball_y[s:e]
         w = Window(
             t0=ts[s], t1=ts[e - 1] + step,
             motion=float(np.mean(motion[s:e])),
@@ -111,6 +123,11 @@ def analyze_video(video: Path, work_dir: Path, detector: FootballDetector,
             n_players=float(np.mean(n_players[s:e])),
             has_ball=float(np.mean(ball_seen[s:e])),
             goal_zone_time=float(np.mean(in_goal_zone[s:e])),
+            possession_home=float(np.nanmean(ph)) if np.any(np.isfinite(ph)) else -1.0,
+            possession_away=float(np.nanmean(pa)) if np.any(np.isfinite(pa)) else -1.0,
+            n_tracks=float(np.mean(n_tracks[s:e])),
+            ball_y_frac=float(np.nanmean(by)) if np.any(np.isfinite(by)) else 0.5,
+            corner_time=float(np.mean(in_corner[s:e])),
         )
         windows.append(w)
 
@@ -126,4 +143,5 @@ def analyze_video(video: Path, work_dir: Path, detector: FootballDetector,
 
 if __name__ == "__main__":
     import sys
-    analyze_video(Path(sys.argv[1]), Path(sys.argv[2]), FootballDetector())
+    from app.vision.fv_tracker import make_detector
+    analyze_video(Path(sys.argv[1]), Path(sys.argv[2]), make_detector())
