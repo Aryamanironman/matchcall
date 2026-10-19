@@ -1,0 +1,9 @@
+torch>=2.4
+torchvision
+ultralytics>=8.2
+opencv-python
+pillow
+numpy
+edge-tts
+google-generativeai
+tqdm
