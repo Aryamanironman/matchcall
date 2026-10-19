@@ -21,10 +21,12 @@ def main():
     ap.add_argument("--start-away", type=int, default=0)
     ap.add_argument("--minute-offset", type=float, default=34.63)
     ap.add_argument("--gpu", type=int, default=0)
+    ap.add_argument("--t0", type=float, default=0.0)
+    ap.add_argument("--duration", type=float, default=None)
     args = ap.parse_args()
     os.environ["FC_SCORE_OCR_GPU"] = "1" if args.gpu else "0"
     anchors = [a.to_dict() for a in detect_score_flips(
-        args.video,
+        args.video, t0=args.t0, duration=args.duration,
         start_score={"home": args.start_home, "away": args.start_away},
         minute_offset=args.minute_offset)]
     out = Path(args.out)
