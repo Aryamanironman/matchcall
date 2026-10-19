@@ -27,9 +27,12 @@ import numpy as np
 
 from app.config import settings
 
-# FootballVision's shipped checkpoint. Copied into the project so the third
-# party clone is not required at inference time.
-DEFAULT_WEIGHTS = settings.models_dir / "footballvision" / "yolov5su_best.pt"
+# Prefer Aryaman's own fine-tuned YOLOv5su once it exists; fall back to the
+# checkpoint shipped by the FootballVision repo until then.
+_ARYAMAN_WEIGHTS = (settings.models_dir / "aryaman_yolo" /
+                    "aryaman_yolov5lu_football" / "weights" / "best.pt")
+DEFAULT_WEIGHTS = (_ARYAMAN_WEIGHTS if _ARYAMAN_WEIGHTS.exists() else
+                   settings.models_dir / "footballvision" / "yolov5su_best.pt")
 
 
 def _player_color(image: np.ndarray, bbox) -> np.ndarray | None:

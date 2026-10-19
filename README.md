@@ -93,6 +93,24 @@ FISH_VOICE_ID=40f53434437e46a5bcbb5abb39f5079c
 As soon as the key is set, re-run the reel to re-voice every line with
 `s2.1-pro-free` — no other change.
 
+## Aryaman YOLOv5lu detector (product model)
+
+The FootballVision repo's improved detection is **YOLOv5lu** (large;
+`main.py` loads `models/yolov5lu/best.pt`) plus **YOLOv8x** for pitch
+keypoints — it does **not** use YOLO26. Train Aryaman's detector on the full
+V1 export (8,677 train / 2,996 val, 3 classes):
+
+```powershell
+.venv\Scripts\python scripts\train_aryaman_yolov5.py
+```
+
+- Base: `yolov5lu.pt` (the repo's detection architecture)
+- Output: `models/aryaman_yolo/aryaman_yolov5lu_football/weights/best.pt`
+- ClearML: project **Football Commentator**, task **Aryaman YOLOv5lu football
+  detector — V1 fine-tune**, dataset artifact + live metrics/plots + registered
+  output model `aryaman-yolov5lu-football`
+- `app/vision/fv_tracker.py` prefers the Aryaman checkpoint once it exists
+
 ## Full-match dub
 
 ```powershell
