@@ -243,8 +243,9 @@ def main() -> None:
     ap.add_argument("--max-clips", type=int, default=10)
     ap.add_argument("--start-score-home", type=int, default=2)
     ap.add_argument("--start-score-away", type=int, default=0)
-    ap.add_argument("--minute-offset", type=float, default=34.63,
-                    help="broadcast match-minute at video t0")
+    ap.add_argument("--minute-offset", type=float, default=35.33,
+                    help="official match-minute at video t0 (ARG-FRA: clock "
+                         "34:38, official ~35:20)")
     ap.add_argument("--orig-vol", type=float, default=0.35)
     ap.add_argument("--reuse-analysis", action="store_true", default=True)
     ap.add_argument("--reuse-score", action="store_true", default=True)

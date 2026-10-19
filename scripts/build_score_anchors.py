@@ -19,7 +19,7 @@ def main():
     ap.add_argument("--out", default=r"C:\Users\asus\football-commentator\output\commented_highlights\score_anchors.json")
     ap.add_argument("--start-home", type=int, default=2)
     ap.add_argument("--start-away", type=int, default=0)
-    ap.add_argument("--minute-offset", type=float, default=34.63)
+    ap.add_argument("--minute-offset", type=float, default=35.33)
     ap.add_argument("--gpu", type=int, default=0)
     ap.add_argument("--t0", type=float, default=0.0)
     ap.add_argument("--duration", type=float, default=None)

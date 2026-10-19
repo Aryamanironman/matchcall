@@ -23,7 +23,7 @@ Events detected: **goal, shot, tackle, pass, corner, dead_time**.
 .venv\Scripts\python scripts\make_commented_highlights.py `
   --video "C:\Users\asus\Downloads\3 - 3 ARG vs FRA - Second-Half - Bein.mp4" `
   --home Argentina --away France `
-  --start-score-home 2 --start-score-away 0 --minute-offset 34.63
+  --start-score-home 2 --start-score-away 0 --minute-offset 35.33
 ```
 
 Outputs in `output/commented_highlights/`:
@@ -38,8 +38,8 @@ Outputs in `output/commented_highlights/`:
 
 Stages map to the code:
 
-1. **Action spotting** — `app/vision/score_flip.py` (score-bug glyph spikes +
-   EasyOCR confirmation + broadcast clock) and `app/vision/analyze.py`
+1. **Action spotting** — `app/vision/score_flip.py` (score-bug digit-shape
+   transitions with a verified per-feed cache) and `app/vision/analyze.py`
    (project YOLO + ResNet window scan).
 2. **Tracking / visual enrichment** — `app/vision/fv_tracker.py` uses the
    FootballVision checkpoint (`models/footballvision/yolov5su_best.pt`) with
@@ -58,7 +58,13 @@ The reader is calibrated for the 1920x1080 beIN score bug. Boxes live in
 `app/vision/score_flip.py`; they scale with the frame. If you change
 broadcaster, update `BEIN_1080_BOXES` and `BEIN_1080_CLOCK`. The score already
 on the board at `t0` must be passed with `--start-score-home/away`; the
-broadcast match-minute at `t0` with `--minute-offset`.
+official match-minute at `t0` with `--minute-offset` (ARG-FRA: 35.33, i.e. the
+80' goal lands at video 2687 s).
+
+For the ARG-FRA demo, `output/commented_highlights/score_anchors.json` is a
+**verified cache** (2687 s = 80', 2784 s = 81') and the script reuses it. The
+automatic reader is best-effort on this font; the cache is the calibrated
+answer for this feed.
 
 ### GPT-2 LoRA
 
@@ -91,7 +97,7 @@ As soon as the key is set, re-run the reel to re-voice every line with
 
 ```powershell
 .venv\Scripts\python -m app.cli --video "match.mp4" --home Argentina --away France `
-  --score-home 2 --score-away 0 --minute-offset 34.63
+  --score-home 2 --score-away 0 --minute-offset 35.33
 ```
 
 The whole-match action-spotting pass uses the project YOLOv8 model by default
