@@ -17,3 +17,8 @@ _probe_*
 work/
 *.part
 *.ytdl
+
+# gated SoccerReplay-1988 source and derived corpora (CC-BY-NC-SA)
+data/soccerreplay/
+data/commentator_train_v4.jsonl
+data/commentator_valid_v4.jsonl

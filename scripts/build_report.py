@@ -114,6 +114,7 @@ def main() -> None:
     rows = y.get("rows") or []
     hist = l.get("loss_history") or []
     ev = l.get("eval") or {}
+    v4 = "SoccerReplay" in (l.get("dataset") or "")
     moments = d.get("moments") or []
     goals = [m for m in moments if m.get("kind") == "goal"]
     now = dt.datetime.now().strftime("%d %b %Y, %H:%M")
@@ -136,10 +137,12 @@ def main() -> None:
         {"name": "mAP50–95", "color": C["s4"],
          "points": [(r["epoch"], r["mAP50_95"]) for r in rows if r["mAP50_95"] is not None]},
     ], title="YOLOv5lu — validation metrics", y_max=1, y_fmt=".2f")
+    llm_title = ("GPT-2 LoRA v4" if "SoccerReplay" in (l.get("dataset") or "")
+                 else "GPT-2 LoRA v3")
     llm_svg = line_svg([
         {"name": "loss", "color": C["sky"],
          "points": [(h["step"], h["loss"]) for h in hist if h.get("loss") is not None]},
-    ], title="GPT-2 LoRA v3 — training loss", x_label="step", height=210)
+    ], title=f"{llm_title} — training loss", x_label="step", height=210)
 
     moment_rows = "".join(
         f"<tr><td>{m.get('minute')}′</td><td>{e(str(m.get('kind','')))}</td>"
@@ -332,8 +335,9 @@ parameters, metrics, plots and the registered model.</p>
 </section>
 
 <section>
-<h2>GPT-2 LoRA v3.</h2>
-<p class="sub">Completion-only loss on a grounded corpus, rank 16, 3 epochs.
+<h2>{llm_title}.</h2>
+<p class="sub">{e(l.get('method') or 'LoRA, completion-only loss')} on
+{e(l.get('dataset') or 'a grounded corpus')}, {l.get('epochs','—')} epochs.
 The adapter is <span class="mono">{e(str(l.get('adapter',{}).get('path','')))}</span>.</p>
 <div class="grid g4">
 {card(fmt(l.get('final_loss')), 'final epoch loss', 'sky')}
@@ -344,11 +348,9 @@ The adapter is <span class="mono">{e(str(l.get('adapter',{}).get('path','')))}</
 {llm_svg}
 <div class="note"><b>Evaluation.</b> On the ten ARG–FRA moments,
 <b>{ev.get('gpt2_accepted','—')}</b> GPT-2 lines passed the grounding validator and
-<b>{ev.get('template_fallback','—')}</b> fell back to templates. The adapter trains
-cleanly (loss {fmt(l.get('final_loss'))}), but its free-form lines drifted, so the
-validator refuses invented teams, scores or players by design. The pipeline output
-is therefore grounded templates on this feed — the model is wired in and evaluated,
-not silently trusted.</div>
+<b>{ev.get('template_fallback','—')}</b> fell back to templates;
+accepted lines average <b>{ev.get('avg_words','—')}</b> words.
+{f"The adapter was trained on {e(l.get('dataset') or '')}." if v4 else "The v3 adapter's free-form lines drifted, so the validator refuses invented teams, scores or players by design."}</div>
 <h3 style="margin-top:22px">Loss history</h3>
 <pre>{e(json.dumps(l.get('logs') or [], indent=1)[:4000])}</pre>
 <div class="links">{f'<a href="{e(l["task_url"])}">ClearML task</a>' if l.get('task_url') else '<span class="muted">ClearML task pending</span>'}

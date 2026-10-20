@@ -37,6 +37,12 @@ def _load():
     if settings.device not in ("cpu", ""):
         dev = (f"cuda:{settings.device}" if settings.device.isdigit()
                else settings.device)
+        # the YOLO run can leave only a couple of hundred MiB free; generating
+        # a few hundred tokens needs far less on CPU and must not OOM the demo
+        if dev.startswith("cuda"):
+            free, _total = torch.cuda.mem_get_info()
+            if free < 1_200_000_000:
+                dev = "cpu"
         model = model.half().to(dev)
     _MODEL = (tok, model)
     return _MODEL
@@ -51,27 +57,30 @@ _DEFAULT_EXCITEMENT = {"goal": "huge", "shot": "high", "tackle": "medium",
                        "corner": "medium", "save": "high"}
 
 
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
+_MAX_WORDS = 55  # two to three spoken sentences; the v4 adapter is trained for this
+
+
 def _clean(text: str) -> str:
     text = text.split("\n")[0]
     text = re.sub(r"[\[\]]", " ", text)  # never leak markup
-    # Do NOT cut at the first period/exclamation: lines legitimately start
-    # with "GOAL!" or "It's in!" followed by the actual sentence. Only trim a
-    # genuinely rambling generation at a sentence boundary near the end.
-    if len(text.split()) > 30:
-        m = re.search(r"^(.{40,300}?[.!?])(\s|$)", text)
-        if m:
-            text = m.group(1)
     text = re.sub(r"\s+", " ", text).strip()
+    # Keep every complete sentence that fits inside the word cap. Trimming at
+    # the *first* sentence (the old behaviour) threw away the second half of
+    # the longer lines the v4 adapter is trained to write.
+    words = text.split()
+    if len(words) > _MAX_WORDS:
+        cut = " ".join(words[:_MAX_WORDS])
+        bounds = list(re.finditer(r"[.!?](?=\s|$)", cut))
+        text = cut[:bounds[-1].end()] if bounds else cut.rstrip(" ,;:")
     text = text.encode("ascii", "ignore").decode()  # drop tokenizer mojibake
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)  # fromFrance -> from France
-    # Keep the spoken line inside the ~10 s clip (and inside one breath).
-    words = text.split()
-    if len(words) > 20:
-        text = " ".join(words[:20]).rstrip(" ,;:")
-        m = re.search(r"^(.*[.!?])(\s|$)", text)
-        if m:
-            text = m.group(1)
     # drop leading dangling conjunctions from mid-sentence starts
     text = re.sub(r"^(and|but|so|which|who)\s+", "", text, flags=re.I)
     if text:
@@ -102,19 +111,28 @@ _BLOCK_CLAIMS = {"penalty", "red card", "yellow card", "offside", "var",
 # A line must actually be about the event it is attached to. Without this a
 # small model happily calls a goal "a brilliant stop".
 _EVENT_WORDS = {
-    "goal": {"goal", "score", "scored", "scores", "net", "buried", "equal",
-             "levelled", "level", "lead", "ahead", "breakthrough", "erupts",
-             "punish", "finish", "converted", "ripples", "celebrate", "have it",
+    "goal": {"goal", "goals", "score", "scored", "scores", "scoring", "net",
+             "buried", "equal", "equaliser", "equalizer", "levelled", "level",
+             "lead", "ahead", "breakthrough", "erupts", "punish", "finish",
+             "finished", "converted", "ripples", "celebrate", "have it",
              "make it", "made it", "back in", "break the deadlock", "drama",
-             "sensational", "magic", "spectacular", "opened the scoring"},
-    "shot": {"shot", "strike", "struck", "effort", "chance", "keeper",
-             "save", "saved", "wide", "post", "blocked", "deflect", "volley",
-             "header", "tries", "try", "shoot", "drive", "sight of goal"},
+             "sensational", "magic", "spectacular", "opened the scoring",
+             "opener", "winner", "consolation", "header", "strike", "strikes",
+             "shot", "double", "drew level", "pull one back"},
+    "shot": {"shot", "shots", "strike", "struck", "effort", "chance",
+             "keeper", "save", "saved", "wide", "post", "bar", "blocked",
+             "block", "deflect", "volley", "header", "tries", "try", "shoot",
+             "drive", "sight of goal", "attempt", "curler", "dipping",
+             "rebound", "distance", "free kick", "penalty area", "crossbar",
+             "goalmouth", "on target", "off target"},
     "tackle": {"tackle", "challenge", "win", "won", "defend", "defending",
-               "clear", "clearance", "recover", "muscle", "snuff", "shut",
-               "dig", "turnover", "ball back"},
-    "corner": {"corner", "delivery", "swing", "set-piece", "box", "whipped",
-               "send the big men"},
+               "defender", "clear", "cleared", "clearance", "recover",
+               "muscle", "snuff", "shut", "dig", "turnover", "ball back",
+               "intercept", "intercepted", "avert", "dispossess", "press",
+               "pressure", "block", "blocked", "slide tackle"},
+    "corner": {"corner", "corners", "delivery", "swing", "swung",
+               "set-piece", "box", "whipped", "cross", "crossed", "header",
+               "flag", "send the big men", "short corner", "in-swinger"},
 }
 
 
@@ -181,7 +199,7 @@ def event_line(label: str, features: dict, teams: dict,
     poss_team = teams.get(poss, "both sides") if poss in ("home", "away") \
         else "both sides"
     word = _LABEL_WORD.get(label, label)
-    history = (f"{scoreline}, {minute}th minute, "
+    history = (f"{scoreline}, {_ordinal(minute)} minute, "
                f"{poss_team} in possession.")
     # Prefill the control tokens so the model only has to write the line.
     # This is the completion-only distribution the adapter was trained on.
@@ -195,7 +213,7 @@ def event_line(label: str, features: dict, teams: dict,
             with _LOCK, torch.no_grad():
                 ids = tok(prompt, return_tensors="pt").to(model.device)
                 out = model.generate(
-                    **ids, max_new_tokens=42, min_new_tokens=8, do_sample=True,
+                    **ids, max_new_tokens=96, min_new_tokens=14, do_sample=True,
                     temperature=max(0.55, 0.90 - 0.15 * attempt),
                     top_p=0.9, repetition_penalty=1.25,
                     no_repeat_ngram_size=4, pad_token_id=tok.eos_token_id,

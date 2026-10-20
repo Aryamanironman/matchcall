@@ -54,7 +54,7 @@ LINES = {
         "Clinical from {team}! The keeper had no chance!",
         "The breakthrough! {team} finally find the net!",
         "Drama! {team} score and the noise is deafening!",
-        "{team} in the {minute}th minute — {scoreline}! What a moment!",
+        "{team} in the {minute_ord} minute — {scoreline}! What a moment!",
         "They've only gone and scored! {team} — {scoreline}!",
         "The deadlock is broken by {team}! {scoreline}!",
         "A goal out of nothing for {team}! The crowd can't believe it!",
@@ -111,7 +111,7 @@ LINES = {
         "Patient stuff from {team}, switching the play smartly.",
         "{team} work it wide and look to stretch the defence.",
         "{team} string the passes together in the {phase} stages.",
-        "It's the {minute}th minute and {team} are dictating the rhythm.",
+        "It's the {minute_ord} minute and {team} are dictating the rhythm.",
         "{team} circulate it patiently.",
         "Discipline from {team} — keeping the ball when it matters.",
         "Little triangle from {team} near the touchline, neat and tidy.",
@@ -170,11 +170,18 @@ LINES = {
 }
 
 
+def ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
 def history_variants(home, away, hs, a_s, minute, poss_team, phase):
     scoreline = f"{home} {hs}-{a_s} {away}"
+    mo = ordinal(minute)
     return [
-        f"{scoreline}, {minute}th minute. {poss_team} in possession.",
-        f"{minute}th minute at {home} v {away}; {poss_team} on the ball.",
+        f"{scoreline}, {mo} minute. {poss_team} in possession.",
+        f"{mo} minute at {home} v {away}; {poss_team} on the ball.",
         f"{scoreline}. {poss_team} in possession in the {phase}.",
         f"The {phase} stages, {scoreline}, {poss_team} on the ball.",
         f"{scoreline}, {minute} minutes gone.",
@@ -213,6 +220,7 @@ def main():
                                            poss, phase))
         line = rng.choice(LINES[event]).format(
             team=team, home=home, away=away, minute=minute,
+            minute_ord=ordinal(minute),
             scoreline=scoreline, phase=phase, poss_team=poss)
         text = (f"[HISTORY] {hist} [EVENT] {event} by {team} "
                 f"[INTENSITY] {intensity} [COMMENTARY] {line}")

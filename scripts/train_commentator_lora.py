@@ -21,10 +21,24 @@ import torch
 from peft import LoraConfig, get_peft_model
 from torch.utils.data import Dataset
 from transformers import (AutoModelForCausalLM, AutoTokenizer, Trainer,
-                          TrainingArguments)
+                          TrainerCallback, TrainingArguments)
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKER = "[INTENSITY]"
+
+
+class ClearMLCallback(TrainerCallback):
+    """Stream Trainer scalars into the ClearML task as they are logged."""
+
+    def __init__(self, task):
+        self.logger = task.get_logger()
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        for key, value in (logs or {}).items():
+            if isinstance(value, (int, float)):
+                self.logger.report_scalar(
+                    "train", key, value=float(value),
+                    iteration=state.global_step)
 
 
 class CommentaryDataset(Dataset):
@@ -81,7 +95,43 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--max-length", type=int, default=90)
     ap.add_argument("--rank", type=int, default=16)
+    ap.add_argument("--fp16", action="store_true",
+                    help="mixed precision on CUDA (much faster on a small GPU)")
+    ap.add_argument("--save-steps", type=int, default=1000)
+    ap.add_argument("--warmup-ratio", type=float, default=0.03)
+    ap.add_argument("--clearml", action="store_true",
+                    help="log the run, curves and adapter to ClearML")
+    ap.add_argument("--task-name",
+                    default="GPT-2 LoRA v4 — SoccerReplay-1988 commentary")
     args = ap.parse_args()
+
+    task = None
+    callbacks = []
+    if args.clearml:
+        try:
+            from clearml import Task, TaskTypes
+            task = Task.init(
+                project_name="Football Commentator", task_name=args.task_name,
+                task_type=TaskTypes.training, output_uri=True,
+                reuse_last_task_id=False,
+                tags=["aryaman", "gpt2", "lora", "commentary", "v4",
+                      "soccerreplay-1988"])
+            task.connect({
+                "base_model": args.base,
+                "method": f"LoRA r={args.rank}, completion-only loss",
+                "epochs": args.epochs,
+                "batch_size": args.batch,
+                "grad_accum": args.grad_accum,
+                "learning_rate": args.lr,
+                "max_length": args.max_length,
+                "max_words": 55,
+                "dataset": "Homie0609/SoccerReplay-1988 + synthetic grounding",
+            })
+            callbacks.append(ClearMLCallback(task))
+            print("ClearML task:", task.get_output_log_web_page(), flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"ClearML disabled ({type(exc).__name__}: {exc})", flush=True)
+            task = None
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -101,21 +151,63 @@ def main():
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
-        fp16=False,
+        fp16=args.fp16,
         logging_steps=20,
-        save_steps=2000,
-        save_total_limit=1,
+        save_steps=args.save_steps,
+        save_total_limit=2,
+        warmup_ratio=args.warmup_ratio,
+        weight_decay=0.01,
         report_to="none",
         remove_unused_columns=False,
     )
     trainer = Trainer(model=model, args=args_train, train_dataset=ds,
-                      data_collator=make_collator(tok.eos_token_id))
+                      data_collator=make_collator(tok.eos_token_id),
+                      callbacks=callbacks)
     print(f"training {len(ds)} examples (completion-only loss) -> {out}")
+    if task is not None:
+        task.get_logger().report_text(
+            f"corpus: {len(ds)} examples from {args.data}")
     trainer.train()
     trainer.save_model(str(out))
     tok.save_pretrained(str(out))
     print("saved adapter ->", out)
     print("final:", trainer.state.log_history[-1])
+
+    if task is not None:
+        try:
+            from clearml import OutputModel
+            uploads = {
+                "adapter_config": out / "adapter_config.json",
+                "adapter_model": out / "adapter_model.safetensors",
+                "tokenizer": out / "tokenizer.json",
+                "trainer_state": out / "trainer_state.json",
+                "training_args": out / "training_args.bin",
+                "corpus": Path(args.data),
+            }
+            for name, path in uploads.items():
+                if path.exists():
+                    task.upload_artifact(name, artifact_object=str(path))
+            adapter = out / "adapter_model.safetensors"
+            if adapter.exists():
+                om = OutputModel(task=task,
+                                 name="aryaman-gpt2-lora-commentary-v4")
+                om.update_weights(weights_filename=str(adapter),
+                                  auto_delete_file=False)
+            task.mark_completed()
+            url = task.get_output_log_web_page()
+            (out / "clearml_task.json").write_text(json.dumps({
+                "id": task.id, "url": url, "name": args.task_name,
+            }, indent=2), encoding="utf-8")
+            print("ClearML task:", url, flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"ClearML finalize warning: {type(exc).__name__}: {exc}",
+                  flush=True)
+            try:
+                task.mark_completed()
+            except Exception:  # noqa: BLE001
+                pass
+        finally:
+            task.close()
 
 
 if __name__ == "__main__":

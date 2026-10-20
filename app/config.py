@@ -53,7 +53,9 @@ class Settings:
     max_commentary_words: int = int(os.getenv("MAX_COMMENTARY_WORDS", "18"))
     gpt2_lora_dir: Path = Path(os.getenv(
         "GPT2_LORA_DIR",
-        str(_MODELS_DIR / ("gpt2_lora_v3"
+        str(_MODELS_DIR / ("gpt2_lora_v4"
+                           if (_MODELS_DIR / "gpt2_lora_v4").exists()
+                           else "gpt2_lora_v3"
                            if (_MODELS_DIR / "gpt2_lora_v3").exists()
                            else "gpt2_lora_v2"
                            if (_MODELS_DIR / "gpt2_lora_v2").exists()
