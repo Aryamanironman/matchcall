@@ -174,12 +174,15 @@ class FootballVisionTracker:
         configured attacking direction. Tracks without a colour sample fall
         back to their own x-position at query time.
         """
-        if len(track_colors) < 8:
+        if len(track_colors) < 4:
             return {}, {}
         from sklearn.cluster import KMeans
         tids = list(track_colors)
         arr = np.stack([track_colors[t] for t in tids])
-        km = KMeans(n_clusters=2, init="k-means++", n_init=4,
+        # a 10 s goal clip may expose only a handful of tracks; clustering two
+        # jerseys from four players is still better than the x-position
+        # fallback, which labels everyone on one half as one team
+        km = KMeans(n_clusters=min(2, len(tids)), init="k-means++", n_init=4,
                     random_state=0).fit(arr)
         team_of = {t: int(km.predict(track_colors[t].reshape(1, -1))[0])
                    for t in tids}
@@ -187,9 +190,20 @@ class FootballVisionTracker:
         for t, team in team_of.items():
             means.setdefault(team, []).append(track_cx.get(t, 0.5))
         team_side = {}
-        for team, xs in means.items():
-            right = float(np.mean(xs)) >= 0.5
-            team_side[team] = "home" if right == self.home_attacks_right else "away"
+        if len(means) >= 2:
+            # Compare the teams to each other, not to frame centre: in a goal
+            # clip both sides can sit in the same half, which used to send
+            # every cluster to "away".
+            right_team = max(means, key=lambda t: float(np.mean(means[t])))
+            for team in means:
+                is_right = team == right_team
+                team_side[team] = ("home" if is_right == self.home_attacks_right
+                                   else "away")
+        else:
+            for team, xs in means.items():
+                right = float(np.mean(xs)) >= 0.5
+                team_side[team] = ("home" if right == self.home_attacks_right
+                                   else "away")
         return team_of, team_side
 
     # -- inference -----------------------------------------------------------

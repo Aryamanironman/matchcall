@@ -243,7 +243,7 @@ function markActive(i) {
 function setupReel() {
   const v = $('#reelVideo');
   const tabs = [['#tabReel', '/media/commented_highlights/commented_highlights.mp4'],
-                ['#tabTracking', '/media/commented_highlights/annotated_goal.mp4']];
+                ['#tabTracking', '/media/commented_highlights/annotated_goal_possession.mp4']];
   tabs.forEach(([sel, src]) => {
     $(sel).addEventListener('click', () => {
       tabs.forEach(([s]) => $(s).setAttribute('aria-pressed', String(s === sel)));
@@ -372,7 +372,7 @@ function renderTraining(d) {
   // pipeline card + tracking note reflect the real model
   if (t.weights_ready) {
     $('#pipeTracker').textContent = 'Aryaman YOLOv5lu';
-    $('#trackingNote').textContent = 'Aryaman YOLOv5lu · players, ball, teams';
+    $('#trackingNote').textContent = 'Aryaman YOLOv5lu · players, ball, teams, possession';
   } else {
     $('#pipeTracker').textContent = 'YOLOv5lu · training';
     $('#trackingNote').textContent = 'FootballVision checkpoint · Aryaman YOLOv5lu training';

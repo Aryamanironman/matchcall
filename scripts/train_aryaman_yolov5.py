@@ -64,6 +64,9 @@ def main() -> None:
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--patience", type=int, default=20)
+    ap.add_argument("--resume", action="store_true",
+                    help="resume from --out/weights/last.pt after an "
+                         "interruption (keeps the completed epochs)")
     args = ap.parse_args()
 
     from ultralytics import YOLO
@@ -111,6 +114,13 @@ def main() -> None:
     print(f"  cuda: {torch.cuda.is_available()}", flush=True)
 
     def run_train(batch: int):
+        if args.resume:
+            last = out / "weights" / "last.pt"
+            if not last.exists():
+                raise SystemExit(f"cannot resume: {last} is missing")
+            print(f"resuming from {last}", flush=True)
+            model = YOLO(str(last))
+            return model.train(resume=True)
         model = YOLO(str(args.base))
         return model.train(
             data=str(yaml_path), epochs=args.epochs, imgsz=args.imgsz,

@@ -24,8 +24,16 @@ MODELS = settings.models_dir
 OUT = settings.out_root
 YOLO_ROOT = MODELS / "aryaman_yolo"
 YOLO_RUN = YOLO_ROOT / "aryaman_yolov5lu_football"
-YOLO_LOG = YOLO_ROOT / "train.log"
-YOLO_ERR = YOLO_ROOT / "train.err.log"
+# The original run wrote train.log; the resumed run appends to
+# train_resume.log. Follow whichever was written last so a live run never
+# reads as "stalled".
+_LOG_CANDIDATES = [YOLO_ROOT / "train_resume.log", YOLO_ROOT / "train.log"]
+YOLO_LOG = max((p for p in _LOG_CANDIDATES if p.exists()),
+               key=lambda p: p.stat().st_mtime,
+               default=YOLO_ROOT / "train.log")
+YOLO_ERR = YOLO_ROOT / ("train_resume.err.log"
+                        if YOLO_LOG.name.startswith("train_resume")
+                        else "train.err.log")
 _APP_ROOT = Path(__file__).resolve().parents[1]
 # The v3 checkpoint was written in the worktree while settings.models_dir
 # points at the main checkout; use whichever actually holds the checkpoint.
@@ -243,7 +251,7 @@ def demo_status() -> dict:
     return {
         "available": True,
         "video_url": "/media/commented_highlights/commented_highlights.mp4",
-        "tracking_url": "/media/commented_highlights/annotated_goal.mp4",
+        "tracking_url": "/media/commented_highlights/annotated_goal_possession.mp4",
         "moments": moments,
         "transcript": transcript,
         "clip_len": clip_len,
@@ -272,7 +280,7 @@ def tracking_status() -> dict:
         "detector": "YOLOv5lu fine-tuned on V1 (3 classes incl. Ball)",
         "ball_tracking": ("ByteTrack ball track + constant-velocity gap fill + "
                           "possession from the smoothed ball"),
-        "annotated_url": "/media/commented_highlights/annotated_goal.mp4",
+        "annotated_url": "/media/commented_highlights/annotated_goal_possession.mp4",
         "meta": meta,
         "updated": meta.get("created"),
     }
