@@ -255,7 +255,7 @@ def llm_status() -> dict:
         "base_model": adapter_cfg.get("base_model") or "gpt2",
         "method": (f"LoRA r={rank}, completion-only loss" if rank
                    else "LoRA r=16, completion-only loss"),
-        "dataset": ("SoccerReplay-1988 (500 matches) + synthetic grounding"
+        "dataset": ("SoccerReplay-1988 (1,000 matches) + synthetic grounding"
                     if is_v4 else "grounded synthetic corpus"),
         "epochs": state.get("num_train_epochs") or 3,
         "steps": state.get("global_step") or (hist[-1]["step"] if hist else None),
