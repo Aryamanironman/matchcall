@@ -247,15 +247,18 @@ class Gpt2Announcer:
 
     def event_line(self, label: str, features: dict) -> tuple[str, str]:
         # fine-tuned GPT-2 first; the validator rejects invented facts and
-        # the template announcer is the per-line fallback
+        # the template announcer is the per-line fallback.
+        # commentary_gpt2.event_line returns (line, intensity) - unpack it;
+        # treating the tuple as a string raised and forced every reel line
+        # to the template fallback.
         try:
-            line = self._gpt2.event_line(label, features, self.teams)
+            line, exc = self._gpt2.event_line(label, features, self.teams)
             key = line.lower()
             if key in self._used:
                 raise RuntimeError("duplicate line")
             self._used.add(key)
             self.gpt2_lines += 1
-            return line
+            return line, exc
         except Exception:  # noqa: BLE001
             self.fallback_lines += 1
             return self.fallback.event_line(label, features)
