@@ -63,6 +63,33 @@ def _ordinal(n: int) -> str:
     return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
 
 
+def _bad_word_ids(tok, home: str, away: str) -> list[list[int]]:
+    """Token sequences for teams the model is not allowed to name.
+
+    Suppressing them during generation is stronger than rejecting afterwards:
+    the adapter otherwise drifts to the national teams in its pretraining.
+    """
+    allowed = [t for t in (home.lower(), away.lower()) if t]
+    out: list[list[int]] = []
+    for name in sorted(_BLOCK_NAMES):
+        if any(name in t for t in allowed):
+            continue
+        seq = tok.encode(" " + name, add_special_tokens=False)
+        if seq:
+            out.append(seq)
+    return out
+
+
+def _repair_team_names(line: str, home: str, away: str, team: str) -> str:
+    """Replace an invented team with the grounded event team."""
+    allowed = {t.lower() for t in (home, away)}
+    for name in sorted(_BLOCK_NAMES, key=len, reverse=True):
+        if name in allowed or name in team.lower():
+            continue
+        line = re.sub(r"\b%s\b" % re.escape(name), team, line, flags=re.I)
+    return line
+
+
 _MAX_WORDS = 50  # two to three spoken sentences (~14-16 s of speech)
 
 
@@ -103,6 +130,26 @@ _BLOCK_NAMES = {
     "turkey", "greece", "russia", "ukraine", "romania", "hungary",
     "argentine", "french", "paris", "london", "madrid", "munich",
     "turin", "rome", "berlin", "doha",
+    # national sides the model drifts to
+    "mexico", "usa", "united states", "czech", "slovakia", "slovenia",
+    "bosnia", "albania", "montenegro", "bulgaria", "finland", "iceland",
+    "israel", "georgia", "armenia", "azerbaijan", "kazakhstan", "uzbekistan",
+    "china", "india", "new zealand", "south africa", "ivory coast", "mali",
+    "burkina faso", "dr congo", "zambia", "angola", "cape verde", "paraguay",
+    "bolivia", "venezuela", "costa rica", "honduras", "panama", "jamaica",
+    # clubs the model has invented on held-out prompts
+    "wigan", "sunderland", "leeds", "blackburn", "bolton", "northampton",
+    "sheffield", "tottenham", "everton", "fulham", "brighton", "wolves",
+    "watford", "burnley", "southampton", "leicester", "newcastle",
+    "aston villa", "crystal palace", "nottingham", "bournemouth",
+    "brentford", "atletico", "sevilla", "valencia", "villarreal",
+    "real sociedad", "athletic", "betis", "lazio", "fiorentina",
+    "atalanta", "dortmund", "leipzig", "leverkusen", "frankfurt",
+    "wolfsburg", "monchengladbach", "stuttgart", "hamburg", "schalke",
+    "lyon", "marseille", "monaco", "lille", "nice", "rennes", "ajax",
+    "psv", "feyenoord", "porto", "benfica", "sporting", "celtic",
+    "rangers", "galatasaray", "fenerbahce", "besiktas", "olympiacos",
+    "panathinaikos",
     "messi", "mbappe", "mbappé", "di maria",
 }
 _BLOCK_CLAIMS = {"penalty", "red card", "yellow card", "offside", "var",
@@ -233,20 +280,28 @@ def event_line(label: str, features: dict, teams: dict,
               f"[INTENSITY] {excitement} [COMMENTARY]")
     import torch
     tok, model = _load()
+    bad = _bad_word_ids(tok, home, away)
     last_line = ""
     for attempt in range(3):
         try:
+            # retries anchor the line on the event team: the prompt already
+            # includes the team once, and a prefill makes copying unavoidable
+            prefill = "" if attempt == 0 else f"{team} "
+            prompt_in = prompt if attempt == 0 else f"{prompt} {team}"
             with _LOCK, torch.no_grad():
-                ids = tok(prompt, return_tensors="pt").to(model.device)
+                ids = tok(prompt_in, return_tensors="pt").to(model.device)
                 out = model.generate(
                     **ids, max_new_tokens=96, min_new_tokens=14, do_sample=True,
                     temperature=max(0.55, 0.90 - 0.15 * attempt),
                     top_p=0.9, repetition_penalty=1.25,
                     no_repeat_ngram_size=4, pad_token_id=tok.eos_token_id,
                     eos_token_id=tok.eos_token_id,
+                    bad_words_ids=bad or None,
                 )
             gen = tok.decode(out[0][ids["input_ids"].shape[1]:],
                              skip_special_tokens=True)
+            if prefill:
+                gen = prefill + gen.lstrip()
 
             m = re.search(r"\[INTENSITY\]\s*(\w+)", gen, flags=re.I)
             if m and m.group(1).lower() in ("huge", "high", "medium", "low", "calm"):
@@ -261,6 +316,9 @@ def event_line(label: str, features: dict, teams: dict,
             candidates = [line]
             if team and team.lower() not in line.lower():
                 candidates.append(f"{team} — {line}")
+            repaired = _repair_team_names(line, home, away, team)
+            if repaired != line:
+                candidates.append(repaired)
             for cand in candidates:
                 n_words = sum(1 for w in cand.split()
                               if any(c.isalpha() for c in w))
