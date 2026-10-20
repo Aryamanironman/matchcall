@@ -190,6 +190,7 @@ function lineChart(host, cfg) {
 /* ================================================================== demo */
 
 let reel = null;
+let trackingUrl = null;
 
 function momentHTML(m) {
   const kind = String(m.kind || 'moment');
@@ -242,12 +243,19 @@ function markActive(i) {
 
 function setupReel() {
   const v = $('#reelVideo');
-  const tabs = [['#tabReel', '/media/commented_highlights/commented_highlights.mp4'],
-                ['#tabTracking', '/media/commented_highlights/annotated_goal_possession.mp4']];
-  tabs.forEach(([sel, src]) => {
+  // Resolve the sources at click time: the API appends a version query to the
+  // current reel, and hardcoding the old filename made the tab reload the
+  // pre-v4 video (and its old audio).
+  const tabs = [
+    ['#tabReel', () => (reel && reel.video_url)
+      || '/media/commented_highlights/commented_highlights_v4.mp4'],
+    ['#tabTracking', () => trackingUrl
+      || '/media/commented_highlights/annotated_goal_possession.mp4'],
+  ];
+  tabs.forEach(([sel, getSrc]) => {
     $(sel).addEventListener('click', () => {
       tabs.forEach(([s]) => $(s).setAttribute('aria-pressed', String(s === sel)));
-      v.src = src;
+      v.src = getSrc();
       v.load();
       v.play().catch(() => {});
     });
@@ -271,6 +279,7 @@ function renderTraining(d) {
   const y = d.yolo || {};
   const l = d.llm || {};
   const t = d.tracking || {};
+  trackingUrl = t.annotated_url || trackingUrl;
 
   const state = y.status || 'queued';
   const running = state === 'running' || state === 'starting';
