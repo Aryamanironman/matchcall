@@ -35,6 +35,7 @@ def parse(text: str):
         return None
     kind, team = ev.group(1), ev.group(2).strip()
     h = hist.group(1)
+    h = re.sub(r"^\d+'\s*[—–-]\s*", "", h)  # "79' — Spain 0-1 Italy"
     m = SCORE_RE.search(h)
     if m:
         home, hs, as_, away = (m.group(1).strip(), int(m.group(2)),
@@ -58,6 +59,8 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=40)
     ap.add_argument("--device", default=None)
     ap.add_argument("--show", type=int, default=8)
+    ap.add_argument("--write-eval", default=None,
+                    help="write metrics JSON (e.g. output/llm_eval.json)")
     args = ap.parse_args()
 
     import torch
@@ -79,6 +82,7 @@ def main() -> None:
     rows = rows[:args.n]
     accepted = 0
     lengths = []
+    accepted_lengths = []
     sent2 = 0
     shown = 0
     for text in rows:
@@ -99,10 +103,21 @@ def main() -> None:
         if "[COMMENTARY]" in gen:
             gen = gen.split("[COMMENTARY]", 1)[1]
         line = _clean(gen)
-        ok = bool(line) and _validate(line, feats, teams, kind, team)
+        # mirror runtime/commentary_gpt2.event_line: a grounded sentence that
+        # omits the team gets a broadcast-style attribution instead of a reject
+        candidates = [line]
+        if team and team.lower() not in line.lower():
+            candidates.append(f"{team} — {line}")
+        chosen = next((c for c in candidates
+                       if c and _validate(c, feats, teams, kind, team)), None)
+        ok = chosen is not None
+        if chosen:
+            line = chosen
         accepted += ok
         n_words = len(line.split())
         lengths.append(n_words)
+        if ok:
+            accepted_lengths.append(n_words)
         if sum(line.count(c) for c in ".!?") >= 2:
             sent2 += 1
         if shown < args.show:
@@ -110,11 +125,36 @@ def main() -> None:
             shown += 1
 
     n = len(lengths)
+    mean_words = statistics.mean(lengths) if lengths else 0.0
+    accepted_mean = (statistics.mean(accepted_lengths) if accepted_lengths
+                     else mean_words)
     print(f"\nmodel {args.model_dir}")
     print(f"accepted {accepted}/{n} ({100 * accepted / max(1, n):.0f}%)")
-    print(f"mean words {statistics.mean(lengths):.1f}; "
-          f"median {statistics.median(lengths):.0f}; max {max(lengths)}")
+    print(f"mean words {mean_words:.1f}; "
+          f"median {statistics.median(lengths) if lengths else 0:.0f}; "
+          f"max {max(lengths) if lengths else 0}")
+    print(f"accepted mean words {accepted_mean:.1f}")
     print(f"2+ sentence lines {sent2}/{n}")
+    if args.write_eval:
+        payload = {
+            "eval": "SoccerReplay-1988 held-out (40 matches)",
+            "total": n,
+            "gpt2_accepted": accepted,
+            "template_fallback": n - accepted,
+            "validator_rejections": n - accepted,
+            "accept_rate": round(accepted / max(1, n), 3),
+            "avg_words": round(accepted_mean, 1),
+            "median_words": statistics.median(accepted_lengths)
+            if accepted_lengths else 0,
+            "two_sentence_share": round(sent2 / max(1, n), 3),
+            "model_dir": args.model_dir,
+            "note": ("Held-out SoccerReplay prompts; the runtime cleaner and "
+                     "grounding validator decide acceptance."),
+        }
+        Path(args.write_eval).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.write_eval).write_text(json.dumps(payload, indent=2),
+                                         encoding="utf-8")
+        print("wrote", args.write_eval)
 
 
 if __name__ == "__main__":

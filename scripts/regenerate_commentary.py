@@ -133,8 +133,17 @@ def main() -> None:
 
         rec = dict(m)
         rec.update({"commentary": line, "excitement": exc,
-                    "clip": str(clip), "commentary_source": source})
+                    "clip": str(clip), "commentary_source": source,
+                    "audio_seconds": (round(seg.audio_dur, 2)
+                                      if getattr(seg, "audio_dur", None)
+                                      else None)})
         records.append(rec)
+
+    if args.dry_run:
+        _log(f"dry run: {len(records)} moments; "
+             f"{getattr(announcer, 'gpt2_lines', 0)} GPT-2, "
+             f"{getattr(announcer, 'fallback_lines', 0)} templates")
+        return
 
     final = out / "commented_highlights_v4.mp4"
     if parts:

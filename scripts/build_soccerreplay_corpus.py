@@ -297,6 +297,10 @@ def convert_match(match: dict, rng: random.Random) -> list[str]:
                     and len(joined.split()) <= 65):
                 text = joined
         team = teams[rec["side"]]
+        # The runtime validator requires the event team by name. Targets that
+        # never mention it teach the model to omit it, which caps acceptance.
+        if team.lower() not in text.lower():
+            continue
         hs, as_ = rec["score"]
         poss_side = rec["side"] if rec["kind"] in ("pass", "tackle") \
             else rng.choice(["home", "away"])
@@ -370,9 +374,14 @@ def main() -> None:
         rng.shuffle(short)
         for ln in short[:args.synthetic_mix]:
             try:
-                train.append(json.loads(ln)["text"])
+                t = json.loads(ln)["text"]
             except (ValueError, KeyError):
                 continue
+            ev = re.search(r"\[EVENT\]\s*\w+\s+by\s+(.+?)\s+\[INTENSITY\]", t)
+            completion = t.split("[COMMENTARY]", 1)[-1]
+            if not ev or ev.group(1).strip().lower() not in completion.lower():
+                continue
+            train.append(t)
 
     rng.shuffle(train)
     Path(args.out).write_text(

@@ -243,8 +243,15 @@ def llm_status() -> dict:
         except OSError:
             lines = None
     adapter = LLM_DIR / "adapter_model.safetensors"
+    max_steps = state.get("max_steps")
+    if not state:
+        status = "not-found"
+    elif max_steps and (state.get("global_step") or 0) < max_steps:
+        status = "training"
+    else:
+        status = "done"
     return {
-        "status": "done" if state else "not-found",
+        "status": status,
         "base_model": adapter_cfg.get("base_model") or "gpt2",
         "method": (f"LoRA r={rank}, completion-only loss" if rank
                    else "LoRA r=16, completion-only loss"),
