@@ -98,7 +98,10 @@ def render(video: Path, segments: list[Segment], out_path: Path,
     if orig_audio:
         fc_parts.append(f"[0:a]aformat=sample_rates=44100:channel_layouts=stereo,"
                         f"volume={settings.original_audio_volume}[orig]")
-        fc_parts.append("[vmix][orig]amix=inputs=2:duration=first:normalize=0[aout]")
+        # duration=longest keeps the stadium bed for the whole clip; with
+        # duration=first the mix ended when the voice did, leaving the rest of
+        # every 18 s clip silent.
+        fc_parts.append("[vmix][orig]amix=inputs=2:duration=longest:normalize=0[aout]")
     else:
         fc_parts.append("[vmix]anull[aout]")
 

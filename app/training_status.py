@@ -274,6 +274,16 @@ def llm_status() -> dict:
     }
 
 
+def _media_url(name: str) -> str:
+    """Media URL with a version query so browsers never serve a cached reel."""
+    url = f"/media/commented_highlights/{name}"
+    try:
+        url += f"?v={int((DEMO_DIR / name).stat().st_mtime)}"
+    except OSError:
+        pass
+    return url
+
+
 def demo_status() -> dict:
     v4 = DEMO_DIR / "highlights_v4.json"
     src = v4 if v4.exists() else DEMO_DIR / "highlights.json"
@@ -292,10 +302,10 @@ def demo_status() -> dict:
         transcript = tpath.read_text(encoding="utf-8", errors="replace")
     return {
         "available": True,
-        "video_url": ("/media/commented_highlights/commented_highlights_v4.mp4"
-                      if v4.exists()
-                      else "/media/commented_highlights/commented_highlights.mp4"),
-        "tracking_url": "/media/commented_highlights/annotated_goal_possession.mp4",
+        "video_url": _media_url(
+            "commented_highlights_v4.mp4" if v4.exists()
+            else "commented_highlights.mp4"),
+        "tracking_url": _media_url("annotated_goal_possession.mp4"),
         "moments": moments,
         "transcript": transcript,
         "clip_len": clip_len,
@@ -324,7 +334,7 @@ def tracking_status() -> dict:
         "detector": "YOLOv5lu fine-tuned on V1 (3 classes incl. Ball)",
         "ball_tracking": ("ByteTrack ball track + constant-velocity gap fill + "
                           "possession from the smoothed ball"),
-        "annotated_url": "/media/commented_highlights/annotated_goal_possession.mp4",
+        "annotated_url": _media_url("annotated_goal_possession.mp4"),
         "meta": meta,
         "updated": meta.get("created"),
     }
