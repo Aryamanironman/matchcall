@@ -283,7 +283,7 @@ Overlay: <a href="commented_highlights/annotated_goal_possession.mp4">annotated_
 <p class="sub" style="margin:6px 0 0">Team, minute, score, possession, ball zone
 and tracked-player count. No invented facts are allowed downstream.</p></div>
 <div class="panel"><h3>04 · Commentary</h3>
-<p class="sub" style="margin:6px 0 0">GPT-2 LoRA v3 with a grounding validator;
+<p class="sub" style="margin:6px 0 0">{llm_title} with a grounding validator;
 rejected lines fall back to templates, so the reel always has a line.</p></div>
 <div class="panel"><h3>05 · Voice</h3>
 <p class="sub" style="margin:6px 0 0">Fish Audio s2.1-pro-free, one voice, every
@@ -339,6 +339,7 @@ parameters, metrics, plots and the registered model.</p>
 <p class="sub">{e(l.get('method') or 'LoRA, completion-only loss')} on
 {e(l.get('dataset') or 'a grounded corpus')}, {l.get('epochs','—')} epochs.
 The adapter is <span class="mono">{e(str(l.get('adapter',{}).get('path','')))}</span>.</p>
+{f'<p class="sub">Data: <a href="https://huggingface.co/datasets/Homie0609/SoccerReplay-1988">SoccerReplay-1988</a> (1,000 matches); player and referee names are removed before training, and every target names the event team.</p>' if v4 else ''}
 <div class="grid g4">
 {card(fmt(l.get('final_loss')), 'final epoch loss', 'sky')}
 {card(l.get('steps','—'), 'optimizer steps')}
@@ -346,10 +347,12 @@ The adapter is <span class="mono">{e(str(l.get('adapter',{}).get('path','')))}</
 {card(l.get('corpus',{}).get('examples','—'), 'corpus examples')}
 </div>
 {llm_svg}
-<div class="note"><b>Evaluation.</b> On the ten ARG–FRA moments,
-<b>{ev.get('gpt2_accepted','—')}</b> GPT-2 lines passed the grounding validator and
-<b>{ev.get('template_fallback','—')}</b> fell back to templates;
-accepted lines average <b>{ev.get('avg_words','—')}</b> words.
+<div class="note"><b>Evaluation.</b> Held-out SoccerReplay prompts:
+<b>{ev.get('gpt2_accepted','—')}</b> of <b>{ev.get('total','—')}</b> generated lines
+passed the grounding validator; accepted lines average
+<b>{ev.get('avg_words','—')}</b> words. The ARG–FRA reel used
+<b>{d.get('gpt2_lines','—')}</b> GPT-2 lines and
+<b>{d.get('template_lines','—')}</b> template fallbacks.
 {f"The adapter was trained on {e(l.get('dataset') or '')}." if v4 else "The v3 adapter's free-form lines drifted, so the validator refuses invented teams, scores or players by design."}</div>
 <h3 style="margin-top:22px">Loss history</h3>
 <pre>{e(json.dumps(l.get('logs') or [], indent=1)[:4000])}</pre>

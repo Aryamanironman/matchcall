@@ -63,7 +63,7 @@ def _ordinal(n: int) -> str:
     return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
 
 
-_MAX_WORDS = 55  # two to three spoken sentences; the v4 adapter is trained for this
+_MAX_WORDS = 50  # two to three spoken sentences (~14-16 s of speech)
 
 
 def _clean(text: str) -> str:
@@ -107,6 +107,28 @@ _BLOCK_NAMES = {
 }
 _BLOCK_CLAIMS = {"penalty", "red card", "yellow card", "offside", "var",
                  "substitution", "injury", "disallowed"}
+
+# proper-noun pairs that are safe even though they are not the two teams
+_GENERIC_PROPER = {
+    "premier league", "champions league", "europa league", "fa cup",
+    "league cup", "carabao cup", "community shield", "world cup",
+    "european championship", "nations league", "copa america",
+    "african cup", "serie a", "la liga", "bundesliga", "ligue 1",
+    "boxing day", "new year", "copa del rey", "dfb pokal", "coppa italia",
+    "coupe de france", "efl cup", "conference league",
+}
+_PROPER_PAIR = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b")
+
+
+def _unknown_proper_noun(line: str, home: str, away: str) -> bool:
+    """True when the line names a club/competition we were not told about."""
+    allowed = [t for t in (home, away) if t]
+    for m in _PROPER_PAIR.finditer(line):
+        low = m.group(1).lower()
+        if low in _GENERIC_PROPER or any(t in low for t in allowed):
+            continue
+        return True
+    return False
 
 # A line must actually be about the event it is attached to. Without this a
 # small model happily calls a goal "a brilliant stop".
@@ -153,8 +175,12 @@ def _validate(line: str, features: dict, teams: dict, label: str,
     if any(p in low for p in _BLOCK_CLAIMS):
         return False
     for name in _BLOCK_NAMES:
-        if name in low and name not in {home, away}:
+        # allow a blocked substring when it is part of the prompted team:
+        # "manchester" must not reject a line about "Manchester City".
+        if name in low and not any(name in t for t in (home, away)):
             return False
+    if _unknown_proper_noun(line, home, away):
+        return False
     words = _EVENT_WORDS.get(label)
     if words is not None and not any(w in low for w in words):
         return False
@@ -229,9 +255,18 @@ def event_line(label: str, features: dict, teams: dict,
                 gen = gen.split("[COMMENTARY]", 1)[1]
             line = _clean(gen)
             last_line = line
-            n_words = sum(1 for w in line.split() if any(c.isalpha() for c in w))
-            if n_words >= 4 and _validate(line, features, teams, label, team):
-                return line, excitement
+            # A line can be grounded in substance but omit the team name. The
+            # validator requires the team, so give the model's sentence a
+            # broadcast-style attribution rather than dropping it to a template.
+            candidates = [line]
+            if team and team.lower() not in line.lower():
+                candidates.append(f"{team} — {line}")
+            for cand in candidates:
+                n_words = sum(1 for w in cand.split()
+                              if any(c.isalpha() for c in w))
+                if n_words >= 4 and _validate(cand, features, teams, label,
+                                              team):
+                    return cand, excitement
         except Exception as e:  # noqa: BLE001
             print(f"  [gpt2-lora] generation failed ({type(e).__name__}: {e})")
     if last_line:
