@@ -290,7 +290,7 @@ rejected lines fall back to templates, so the reel always has a line.</p></div>
 line placed on its timestamp and mixed under the crowd.</p></div>
 <div class="panel"><h3>The reel</h3>
 <p class="sub" style="margin:6px 0 0">{d.get('clips','—')} moments × 10 s,
-{d.get('fish_model','Fish')}. <a href="commented_highlights/commented_highlights.mp4">Watch the reel</a>.</p></div>
+{d.get('fish_model','Fish')}. <a href="commented_highlights/{Path(str(d.get('video_url') or 'commented_highlights.mp4')).name}">Watch the reel</a>.</p></div>
 </div>
 
 <h3 style="margin-top:26px">Moment log</h3>
