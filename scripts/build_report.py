@@ -111,6 +111,17 @@ def main() -> None:
                                      "project_url": ts.PROJECT_URL}
 
     b = y.get("best_metrics") or y.get("last_metrics") or {}
+    pz = y.get("paused") or {}
+    y_paused_note = ""
+    if pz and y.get("status") == "paused":
+        y_paused_note = (
+            '<div class="note"><b>Training paused by request.</b> '
+            f'Fine-tuning stopped at epoch {pz.get("epoch_completed", "—")}/'
+            f'{y.get("epochs_total", "—")}; best checkpoint epoch '
+            f'{pz.get("best_epoch", "—")} with mAP50 '
+            f'{pz.get("best_mAP50", "—")} and mAP50-95 '
+            f'{pz.get("best_mAP50_95", "—")}. The weights are preserved and '
+            'resumable with <span class="mono">--resume</span>.</div>')
     rows = y.get("rows") or []
     hist = l.get("loss_history") or []
     ev = l.get("eval") or {}
@@ -324,6 +335,7 @@ parameters, metrics, plots and the registered model.</p>
 {card(', '.join(y.get('dataset',{}).get('classes',[])) or '—', 'classes')}
 {card(f"{y.get('args',{}).get('batch','—')} @ {y.get('args',{}).get('imgsz','—')}", 'batch / imgsz')}
 </div>
+{y_paused_note}
 {loss_svg}
 {map_svg}
 <div class="asset-grid">{assets}</div>

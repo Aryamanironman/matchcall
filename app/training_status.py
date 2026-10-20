@@ -34,6 +34,7 @@ YOLO_LOG = max((p for p in _LOG_CANDIDATES if p.exists()),
 YOLO_ERR = YOLO_ROOT / ("train_resume.err.log"
                         if YOLO_LOG.name.startswith("train_resume")
                         else "train.err.log")
+PAUSE_MARKER = YOLO_ROOT / "train_paused.json"
 _APP_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -153,10 +154,16 @@ def yolo_status() -> dict:
     best_pt = YOLO_RUN / "weights" / "best.pt"
     mtime = YOLO_LOG.stat().st_mtime if YOLO_LOG.exists() else 0
     recent = bool(mtime) and (time.time() - mtime) < 1200
+    pause = _json(PAUSE_MARKER) or None
+    marker_mtime = PAUSE_MARKER.stat().st_mtime if PAUSE_MARKER.exists() else 0
+    # a marker older than the live log means training was resumed
+    paused = bool(pause) and (not mtime or mtime < marker_mtime)
     if done:
         status = "done"
-    elif recent:
+    elif recent and not paused:
         status = "running" if rows or "Starting training" in log else "starting"
+    elif paused:
+        status = "paused"
     elif mtime:
         status = "stalled"
     else:
@@ -181,6 +188,7 @@ def yolo_status() -> dict:
               if (YOLO_RUN / n).exists()}
     return {
         "status": status,
+        "paused": pause if paused else None,
         "task_url": TASK_URL,
         "project_url": PROJECT_URL,
         "run_dir": str(YOLO_RUN),

@@ -287,6 +287,7 @@ function renderTraining(d) {
   const total = y.epochs_total || 100;
   const label = state === 'done' ? 'training complete'
     : state === 'stalled' ? 'training stalled'
+    : state === 'paused' ? `paused at epoch ${epoch}/${total}`
     : state === 'running' ? `epoch ${epoch}/${total}`
     : 'starting';
   $('#statusText').textContent = `Fish s2.1-pro-free · YOLOv5lu ${label}`;
@@ -295,8 +296,9 @@ function renderTraining(d) {
 
   const badge = $('#yoloBadge');
   badge.textContent = state === 'done' ? 'complete'
-    : state === 'stalled' ? 'stalled' : state === 'running' ? 'training' : 'starting';
-  badge.className = 'badge ' + (state === 'done' ? 'done' : state === 'stalled' ? 'stall' : 'live');
+    : state === 'stalled' ? 'stalled' : state === 'paused' ? 'paused'
+    : state === 'running' ? 'training' : 'starting';
+  badge.className = 'badge ' + (state === 'done' ? 'done' : (state === 'stalled' || state === 'paused') ? 'stall' : 'live');
 
   const b = y.best_metrics || y.last_metrics || {};
   const ds = y.dataset || {};
