@@ -35,9 +35,29 @@ YOLO_ERR = YOLO_ROOT / ("train_resume.err.log"
                         if YOLO_LOG.name.startswith("train_resume")
                         else "train.err.log")
 _APP_ROOT = Path(__file__).resolve().parents[1]
-# The v3 checkpoint was written in the worktree while settings.models_dir
-# points at the main checkout; use whichever actually holds the checkpoint.
-_LLM_STATES = [
+
+
+def _v4_states() -> list[Path]:
+    """Newest v4 trainer state in the main checkout or the worktree."""
+    states: list[tuple[int, Path]] = []
+    for root in (MODELS / "gpt2_lora_v4", _APP_ROOT / "models" / "gpt2_lora_v4"):
+        if not root.exists():
+            continue
+        for p in root.glob("checkpoint-*/trainer_state.json"):
+            try:
+                step = int(p.parent.name.split("-", 1)[1])
+            except (IndexError, ValueError):
+                step = 0
+            states.append((step, p))
+        states.append((10 ** 9, root / "trainer_state.json"))
+    states.sort(key=lambda s: s[0], reverse=True)
+    return [p for _s, p in states]
+
+
+# The v4 adapter is trained on SoccerReplay-1988; fall back to v3 until its
+# first checkpoint exists. The checkpoint may live in the worktree while
+# settings.models_dir points at the main checkout, so try both.
+_LLM_STATES = _v4_states() + [
     MODELS / "gpt2_lora_v3" / "checkpoint-1125" / "trainer_state.json",
     _APP_ROOT / "models" / "gpt2_lora_v3" / "checkpoint-1125" / "trainer_state.json",
     settings.gpt2_lora_dir / "checkpoint-1125" / "trainer_state.json",
@@ -46,6 +66,8 @@ LLM_STATE = next((p for p in _LLM_STATES if p.exists()), _LLM_STATES[0])
 LLM_DIR = LLM_STATE.parents[1]
 _CLEARML_CANDIDATES = [
     LLM_DIR / "clearml_task.json",
+    MODELS / "gpt2_lora_v4" / "clearml_task.json",
+    _APP_ROOT / "models" / "gpt2_lora_v4" / "clearml_task.json",
     MODELS / "gpt2_lora_v3" / "clearml_task.json",
     _APP_ROOT / "models" / "gpt2_lora_v3" / "clearml_task.json",
 ]
@@ -204,7 +226,15 @@ def llm_status() -> dict:
     final_loss = sum(tail_losses) / len(tail_losses) if tail_losses else None
     task = _json(LLM_CLEARML) or {}
     eval_ = _json(LLM_EVAL) or {}
-    corpus = settings.data_dir / "commentator_train_v2.jsonl"
+    adapter_cfg = _json(LLM_DIR / "adapter_config.json") or {}
+    rank = adapter_cfg.get("r")
+    is_v4 = "v4" in str(LLM_DIR)
+    corpora = [
+        _APP_ROOT / "data" / "commentator_train_v4.jsonl",
+        settings.data_dir / "commentator_train_v4.jsonl",
+        settings.data_dir / "commentator_train_v2.jsonl",
+    ]
+    corpus = next((p for p in corpora if p.exists()), corpora[-1])
     lines = None
     if corpus.exists():
         try:
@@ -215,8 +245,11 @@ def llm_status() -> dict:
     adapter = LLM_DIR / "adapter_model.safetensors"
     return {
         "status": "done" if state else "not-found",
-        "base_model": "gpt2",
-        "method": "LoRA r=16, completion-only loss",
+        "base_model": adapter_cfg.get("base_model") or "gpt2",
+        "method": (f"LoRA r={rank}, completion-only loss" if rank
+                   else "LoRA r=16, completion-only loss"),
+        "dataset": ("SoccerReplay-1988 (500 matches) + synthetic grounding"
+                    if is_v4 else "grounded synthetic corpus"),
         "epochs": state.get("num_train_epochs") or 3,
         "steps": state.get("global_step") or (hist[-1]["step"] if hist else None),
         "final_loss": round(final_loss, 4) if final_loss is not None else None,
@@ -235,7 +268,9 @@ def llm_status() -> dict:
 
 
 def demo_status() -> dict:
-    hl = _json(DEMO_DIR / "highlights.json") or {}
+    v4 = DEMO_DIR / "highlights_v4.json"
+    src = v4 if v4.exists() else DEMO_DIR / "highlights.json"
+    hl = _json(src) or {}
     if not hl:
         return {"available": False}
     clip_len = float(hl.get("clip_len") or 10.0)
@@ -244,13 +279,15 @@ def demo_status() -> dict:
         mm = dict(m)
         mm["reel_start"] = round((int(mm.get("n", 1)) - 1) * clip_len, 2)
         moments.append(mm)
-    tpath = DEMO_DIR / "transcript.txt"
+    tpath = DEMO_DIR / ("transcript_v4.txt" if v4.exists() else "transcript.txt")
     transcript = ""
     if tpath.exists():
         transcript = tpath.read_text(encoding="utf-8", errors="replace")
     return {
         "available": True,
-        "video_url": "/media/commented_highlights/commented_highlights.mp4",
+        "video_url": ("/media/commented_highlights/commented_highlights_v4.mp4"
+                      if v4.exists()
+                      else "/media/commented_highlights/commented_highlights.mp4"),
         "tracking_url": "/media/commented_highlights/annotated_goal_possession.mp4",
         "moments": moments,
         "transcript": transcript,

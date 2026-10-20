@@ -23,7 +23,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-os.environ.setdefault("GPT2_LORA_DIR", str(ROOT / "models" / "gpt2_lora_v3"))
+_V4_DIR = ROOT / "models" / "gpt2_lora_v4"
+os.environ.setdefault(
+    "GPT2_LORA_DIR",
+    str(_V4_DIR if _V4_DIR.exists() else ROOT / "models" / "gpt2_lora_v3"))
 
 import cv2
 import numpy as np
