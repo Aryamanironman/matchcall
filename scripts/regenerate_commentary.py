@@ -89,8 +89,8 @@ def main() -> None:
     data = json.loads(src.read_text(encoding="utf-8"))
     out = Path(args.out_dir) if args.out_dir else src.parent
     out.mkdir(parents=True, exist_ok=True)
-    tts_dir = out / "tts_v4"
-    tts_dir.mkdir(exist_ok=True)
+    tts_root = out / "tts_v4"
+    tts_root.mkdir(exist_ok=True)
     moments = data.get("moments") or []
     video = Path(data["video"])
     teams = _teams(moments, args.home, args.away)
@@ -119,7 +119,11 @@ def main() -> None:
 
         seg = Segment(t0=2.0, kind="event", event_label=kind,
                       excitement=exc, text=line, speaker="A")
-        tts_mod.synthesize([seg], tts_dir)
+        # one directory per moment: the TTS module names a single segment
+        # seg_0000.mp3, so sharing one folder overwrites earlier audio
+        moment_tts = tts_root / f"m{n:02d}"
+        moment_tts.mkdir(exist_ok=True)
+        tts_mod.synthesize([seg], moment_tts)
         clip = out / f"v4_clip_{n:02d}_{kind}.mp4"
         start = float(m.get("t_clip") or 0.0)
         length = min(args.clip_len, max(1.0, info["duration"] - start))
