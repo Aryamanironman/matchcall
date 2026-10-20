@@ -275,7 +275,7 @@ motion-gated YOLO/ResNet window scan. The ARG–FRA goals were verified at
 <div class="panel"><h3>02 · Tracking</h3>
 <p class="sub" style="margin:6px 0 0">Aryaman YOLOv5lu + ByteTrack for players,
 referee and ball, KMeans jersey teams, and a bounded ball interpolation.
-Overlay: <a href="commented_highlights/annotated_goal.mp4">annotated_goal.mp4</a>.</p></div>
+Overlay: <a href="commented_highlights/annotated_goal_possession.mp4">annotated_goal_possession.mp4</a>.</p></div>
 <div class="panel"><h3>03 · Grounded description</h3>
 <p class="sub" style="margin:6px 0 0">Team, minute, score, possession, ball zone
 and tracked-player count. No invented facts are allowed downstream.</p></div>

@@ -148,6 +148,31 @@ def _select_moments(windows: list[Window], anchors: list[dict],
     return picked[:max_clips]
 
 
+def _frame_possession(row: dict, width: int) -> str | None:
+    """Nearest tracked player to the ball, with a frame-scaled radius.
+
+    FootballVision's 70 px bottom-corner rule is tuned for 1920 px frames; at
+    960 px it almost never matches in open play (one clip sampled only 5 of 40
+    frames). Scale the radius with the frame, then fall back to the tracker's
+    own label.
+    """
+    ball = row.get("ball")
+    tracked = row.get("players_tracked") or {}
+    if ball is None or not tracked:
+        return row.get("possession_side")
+    bx, by = ball[0], ball[1]
+    best = None
+    for bbox, _team, side in tracked.values():
+        d1 = ((bbox[0] - bx) ** 2 + (bbox[3] - by) ** 2) ** 0.5
+        d2 = ((bbox[2] - bx) ** 2 + (bbox[3] - by) ** 2) ** 0.5
+        dist = min(d1, d2)
+        if best is None or dist < best[0]:
+            best = (dist, side)
+    if best is not None and best[0] <= max(70.0, 0.26 * max(1, width)):
+        return best[1]
+    return row.get("possession_side")
+
+
 def _track_clip(video: Path, start: float, length: float, work: Path,
                 tracker: FootballVisionTracker, fps: float = 4.0,
                 width: int = 960) -> dict:
@@ -156,7 +181,8 @@ def _track_clip(video: Path, start: float, length: float, work: Path,
     imgs = [cv2.imread(str(p)) for p in paths]
     imgs = [im for im in imgs if im is not None]
     rows = tracker.infer(imgs) if imgs else []
-    poss = [r.get("possession_side") for r in rows if r.get("possession_side")]
+    frame_w = imgs[0].shape[1] if imgs else width
+    poss = [p for p in (_frame_possession(r, frame_w) for r in rows) if p]
     n_tracks = [len(r.get("players_tracked", {})) for r in rows]
     home_n = sum(1 for p in poss if p == "home")
     away_n = sum(1 for p in poss if p == "away")
@@ -210,6 +236,13 @@ def _annotate(rows: list[dict], imgs: list[np.ndarray], out_path: Path,
     writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"),
                              fps, (w, h))
     home_col, away_col = (255, 255, 255), (255, 120, 0)  # BGR
+    sides = [_frame_possession(r, w) for r in rows]
+    poss = [p for p in sides if p]
+    home_n = sum(1 for p in poss if p == "home")
+    away_n = sum(1 for p in poss if p == "away")
+    total_poss = max(1, home_n + away_n)
+    home_pct = 100.0 * home_n / total_poss
+    away_pct = 100.0 - home_pct
     trail: list[tuple[int, int]] = []
     for i, (row, img) in enumerate(zip(rows, imgs)):
         frame = img.copy()
@@ -250,6 +283,27 @@ def _annotate(rows: list[dict], imgs: list[np.ndarray], out_path: Path,
         cv2.putText(frame, f"{home} (white)  vs  {away} (blue)",
                     (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     (255, 255, 255), 1, cv2.LINE_AA)
+
+        # possession: clip aggregate bar + current possession
+        bar_x, bar_y, bar_w, bar_h = 10, h - 46, w - 20, 6
+        split = bar_x + int(bar_w * home_pct / 100.0)
+        cv2.rectangle(frame, (bar_x, bar_y),
+                      (min(max(split, bar_x), bar_x + bar_w), bar_y + bar_h),
+                      home_col, -1)
+        cv2.rectangle(frame, (split, bar_y), (bar_x + bar_w, bar_y + bar_h),
+                      away_col, -1)
+        cv2.putText(frame, f"{home} {home_pct:.0f}%", (bar_x, bar_y - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, home_col, 1, cv2.LINE_AA)
+        cv2.putText(frame, f"{away} {away_pct:.0f}%",
+                    (bar_x + bar_w - 100, bar_y - 6),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (240, 240, 240), 1,
+                    cv2.LINE_AA)
+        side = sides[i] if i < len(sides) else row.get("possession_side")
+        if side:
+            owner = home if side == "home" else away
+            cv2.putText(frame, f"possession: {owner}", (bar_x, bar_y + 18),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (240, 240, 240), 1,
+                        cv2.LINE_AA)
         writer.write(frame)
     writer.release()
 

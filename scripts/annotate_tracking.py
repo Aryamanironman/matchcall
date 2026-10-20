@@ -25,7 +25,8 @@ sys.path.insert(0, str(ROOT))
 
 from app.config import settings
 from app.vision.fv_tracker import DEFAULT_WEIGHTS, FootballVisionTracker
-from scripts.make_commented_highlights import _annotate, _track_clip
+from scripts.make_commented_highlights import (_annotate, _frame_possession,
+                                               _track_clip)
 
 VIDEO = r"C:\Users\asus\Downloads\3 - 3 ARG vs FRA - Second-Half - Bein.mp4"
 
@@ -41,6 +42,8 @@ def main() -> None:
     ap.add_argument("--weights", default=None,
                     help="default: Aryaman best.pt if present, else the "
                          "FootballVision checkpoint")
+    ap.add_argument("--device", default=None,
+                    help="torch device (e.g. cpu while the GPU is training)")
     ap.add_argument("--home", default="Argentina")
     ap.add_argument("--away", default="France")
     ap.add_argument("--audio-from", default=None,
@@ -62,11 +65,13 @@ def main() -> None:
              else "FootballVision yolov5su")
     print(f"weights: {weights} ({label})", flush=True)
 
-    tracker = FootballVisionTracker(weights=weights, conf=0.15)
+    tracker = FootballVisionTracker(weights=weights, conf=0.15,
+                                    device=args.device)
     t0 = time.time()
     stats = _track_clip(Path(args.video), args.t0, args.duration, work,
                         tracker, fps=4.0, width=960)
     rows = stats["rows"]
+    frame_w = stats["images"][0].shape[1] if stats["images"] else 960
     ball_frames = sum(1 for r in rows if r.get("ball"))
     interp = sum(1 for r in rows if r.get("ball_interpolated"))
     print(f"frames {len(rows)} · ball {ball_frames} · interpolated {interp}",
@@ -105,6 +110,14 @@ def main() -> None:
         "frames": len(rows),
         "ball_frames": ball_frames,
         "interpolated_frames": interp,
+        "possession": {
+            "home_frames": sum(
+                1 for r in rows
+                if _frame_possession(r, frame_w) == "home"),
+            "away_frames": sum(
+                1 for r in rows
+                if _frame_possession(r, frame_w) == "away"),
+        },
         "audio_from": str(src_audio),
         "clip": {"video": args.video, "t0": args.t0,
                  "duration": args.duration},
