@@ -358,6 +358,9 @@ def demo_status() -> dict:
 def tracking_status() -> dict:
     best = YOLO_RUN / "weights" / "best.pt"
     meta = _json(DEMO_DIR / "tracking_meta.json") or {}
+    y26_rel = "yolo26n_comparison/annotated_goal_possession.mp4"
+    y26 = DEMO_DIR / y26_rel
+    y26_meta = _json(y26.parent / "tracking_meta.json") or {}
     trained = best.exists()
     return {
         "weights_ready": trained,
@@ -368,6 +371,8 @@ def tracking_status() -> dict:
         "ball_tracking": ("ByteTrack ball track + constant-velocity gap fill + "
                           "possession from the smoothed ball"),
         "annotated_url": _media_url("annotated_goal_possession.mp4"),
+        "yolo26_url": _media_url(y26_rel) if y26.exists() else None,
+        "yolo26_meta": y26_meta,
         "meta": meta,
         "updated": meta.get("created"),
     }

@@ -188,6 +188,7 @@
           <div class="seg" role="group" aria-label="Choose video">
             <button id="tabReel" aria-pressed="true">The reel</button>
             <button id="tabTracking" aria-pressed="false">Tracking overlay</button>
+            <button id="tabYolo26" aria-pressed="false">YOLO26n overlay</button>
           </div>
           <span class="player-note" id="trackingNote">players · ball · teams · possession</span>
         </div>
@@ -293,7 +294,7 @@
       <div class="train-links" id="llmLinks"></div>
     </div>
   </div>
-  <div class="note" style="margin-top:16px"><b>Next run.</b> YOLO26 full (59 M) vs YOLOv5 large (53 M): both at 640 px for 100 epochs on the same V1 split, queued on SageMaker and logged to ClearML. Its curves, weights and the pipeline rerun will appear here.</div>
+  <div class="note" style="margin-top:16px"><b>YOLO26.</b> The local YOLO26n speed run finished at mAP50 0.806 / mAP50–95 0.480 and its overlay is in the reel tabs; the full YOLO26x vs YOLOv5lu comparison still needs the SageMaker run. Details are in the report.</div>
   <table class="ledger" id="clearmlTable" hidden></table>
   <div class="report-cta">
     <p><b>The full report.</b> Training curves, ClearML links, logs, the pipeline and the reel in one page.</p>
@@ -315,6 +316,6 @@
   </div>
 </footer>
 
-<script src="/app.js?v=20261026" defer></script>
+<script src="/app.js?v=20261027" defer></script>
 </body>
 </html>
