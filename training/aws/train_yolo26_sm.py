@@ -102,8 +102,6 @@ def main() -> None:
             print(f"ClearML setup warning: {type(e).__name__}: {e}", flush=True)
             task = None
 
-    model = YOLO(args.base)
-
     def on_fit_epoch_end(trainer):
         if logger is None:
             return
@@ -121,17 +119,33 @@ def main() -> None:
         except Exception:  # noqa: BLE001
             pass
 
-    model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
-
-    try:
+    def run_training(batch: int):
+        model = YOLO(args.base)
+        model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
         model.train(
             data=str(yaml_path), epochs=args.epochs, imgsz=args.imgsz,
-            batch=args.batch, project=str(model_dir), name="run",
+            batch=batch, project=str(model_dir), name="run",
             exist_ok=True, device=0 if torch.cuda.is_available() else "cpu",
             workers=args.workers, patience=args.patience, seed=args.seed,
             cache=False, amp=True, plots=True, save=True, val=True,
             verbose=True,
         )
+        return model
+
+    try:
+        try:
+            model = run_training(args.batch)
+        except RuntimeError as e:
+            if "out of memory" not in str(e).lower() or args.batch <= 1:
+                raise
+            smaller = max(1, args.batch // 2)
+            print(f"OOM at batch {args.batch}; retrying at batch {smaller}",
+                  flush=True)
+            try:
+                torch.cuda.empty_cache()
+            except Exception:  # noqa: BLE001
+                pass
+            model = run_training(smaller)
     except Exception:
         if task is not None:
             try:
