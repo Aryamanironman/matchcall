@@ -292,7 +292,7 @@ function renderTraining(d) {
     : 'starting';
   $('#statusText').textContent = `Fish s2.1-pro-free · YOLOv5lu ${label}`;
   $('#statusDot').className = 'dot ' + (state === 'done' ? '' : running ? 'live' : 'warn');
-  $('#trainStatus').textContent = `YOLOv5lu ${label} · GPT-2 LoRA v3 done${l.final_loss != null ? ' · loss ' + l.final_loss : ''}`;
+  $('#trainStatus').textContent = `YOLOv5lu ${label} · GPT-2 LoRA v4 done${l.final_loss != null ? ' · loss ' + l.final_loss : ''}`;
 
   const badge = $('#yoloBadge');
   badge.textContent = state === 'done' ? 'complete'
@@ -358,7 +358,7 @@ function renderTraining(d) {
     metric((l.corpus && (l.corpus.lines ?? l.corpus.examples)) ?? '—', 'corpus lines');
 
   lineChart($('#llmChart'), {
-    title: 'GPT-2 LoRA v3 — training loss',
+    title: 'GPT-2 LoRA v4 — training loss',
     xLabel: 'step',
     height: 168,
     series: [{ name: 'loss', color: C.sky,
@@ -369,15 +369,17 @@ function renderTraining(d) {
   const ev = l.eval || {};
   if (ev.gpt2_accepted != null) {
     $('#llmNote').innerHTML =
-      `<b>${esc(ev.gpt2_accepted)} / ${esc(ev.total ?? '—')}</b> lines passed the grounding validator on ARG–FRA; ` +
+      `<b>${esc(ev.gpt2_accepted)} / ${esc(ev.total ?? '—')}</b> lines passed the grounding validator on held-out SoccerReplay matches; ` +
       `${esc(ev.template_fallback ?? '—')} fell back to grounded templates. The adapter trains cleanly, but its free-form lines drifted, so the validator refuses them by design.`;
   } else {
     $('#llmNote').innerHTML =
       '<b>Validator-guarded.</b> The adapter is trained; lines that invent teams, scores or players are rejected and replaced with grounded templates.';
   }
+  const ckpt = (l.trainer_state || '').split(/[\\/]/).slice(-2, -1)[0];
+  const rank = ((l.method || '').match(/r=(\d+)/) || [])[1];
   $('#llmLinks').innerHTML = [
     l.task_url && `<a href="${l.task_url}" target="_blank" rel="noopener">ClearML task</a>`,
-    l.trainer_state && `<span class="muted" style="font-size:11px">checkpoint-1125 · rank 16</span>`,
+    ckpt && `<span class="muted" style="font-size:11px">${esc(ckpt)}${rank ? ' · rank ' + esc(rank) : ''}</span>`,
   ].filter(Boolean).join('');
 
   // pipeline card + tracking note reflect the real model
