@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import re
 import subprocess
 import time
@@ -362,11 +363,16 @@ def tracking_status() -> dict:
     y26 = DEMO_DIR / y26_rel
     y26_meta = _json(y26.parent / "tracking_meta.json") or {}
     trained = best.exists()
+    live_weights = os.getenv("FC_DETECTOR_WEIGHTS", "").strip()
+    live_name = ("YOLO26n" if "yolo26" in live_weights.lower()
+                 else "Aryaman YOLOv5lu")
     return {
         "weights_ready": trained,
         "weights": str(best) if trained else None,
         "weights_bytes": best.stat().st_size if trained else 0,
         "model": "Aryaman YOLOv5lu" if trained else "FootballVision yolov5su",
+        "live_detector": live_name,
+        "live_weights": live_weights or None,
         "detector": "YOLOv5lu fine-tuned on V1 (3 classes incl. Ball)",
         "ball_tracking": ("ByteTrack ball track + constant-velocity gap fill + "
                           "possession from the smoothed ball"),
