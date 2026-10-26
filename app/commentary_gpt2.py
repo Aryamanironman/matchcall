@@ -260,7 +260,10 @@ def _validate(line: str, features: dict, teams: dict, label: str,
     if label == "goal":
         if _phrase_in(low, _GOAL_CONTRADICTIONS):
             return False
-        if not _phrase_in(low, _GOAL_STRONG):
+        # The goal call must lead the line. "...another goal" at the end of a
+        # foul/corner description is not a goal call.
+        first = re.split(r"(?<=[.!?])\s+", line.strip(), maxsplit=1)[0].lower()
+        if not _phrase_in(first, _GOAL_STRONG):
             return False
     hs = features.get("score_home")
     as_ = features.get("score_away")
