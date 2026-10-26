@@ -75,8 +75,15 @@ def run_pipeline(video: Path, home: str, away: str, t0: float = 0.0,
     # reader remains a fallback when a calibration file exists.
     anchors: list[dict] = []
     try:
-        from app.vision.score_flip import detect_score_flips
+        from app.vision.score_flip import detect_score_flips, read_start_score
         progress("sampling", 0.06, "reading score-bug digits")
+        if not start_score or all(
+                int(start_score.get(s, 0) or 0) == 0
+                for s in ("home", "away")):
+            inferred = read_start_score(video, t0=t0)
+            if inferred:
+                start_score = inferred
+                print(f"      score bug: inferred start {start_score}")
         anchors = [a.to_dict() for a in detect_score_flips(
             video, t0=t0, duration=dur, minute_offset=minute_offset,
             start_score=start_score)]

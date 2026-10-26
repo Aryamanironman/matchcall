@@ -71,11 +71,18 @@ def classify_digit(crop: np.ndarray) -> int | None:
         return None
     # The score-bug border is a long, thin white line; the digit is tall.
     min_h = max(8, int(0.45 * crop.shape[0]))
+    max_h = int(0.82 * crop.shape[0])
     candidates = [i for i in range(1, n)
                   if stats[i, cv2.CC_STAT_HEIGHT] >= min_h
                   and stats[i, cv2.CC_STAT_AREA] >= 20]
     if not candidates:
         return None
+    # A neighbouring competition logo can share the away-digit box and is
+    # taller than the digit; prefer components at digit height.
+    digit_like = [i for i in candidates
+                  if stats[i, cv2.CC_STAT_HEIGHT] <= max_h]
+    if digit_like:
+        candidates = digit_like
     idx = max(candidates, key=lambda i: int(stats[i, cv2.CC_STAT_AREA]))
     x, y, w, h, area = stats[idx]
     if area < 25 or h < 12:
@@ -93,7 +100,33 @@ def classify_digit(crop: np.ndarray) -> int | None:
     # "2" has a wide bottom bar; "1" is a narrow stem (even with its top flag).
     bottom = comp[int(h * 0.72):, :]
     bottom_run = max((int(r.sum()) for r in bottom), default=0)
-    return 2 if bottom_run >= 0.55 * w else 1
+    return 2 if bottom_run >= 0.80 * w else 1
+
+
+def read_start_score(video, t0: float = 0.0, samples: int = 3) -> dict:
+    """Read the score already on the board at the start of a clip."""
+    cap = cv2.VideoCapture(str(video))
+    if not cap.isOpened():
+        return {}
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    boxes, _clock, _crop = _boxes_for(width, height)
+    if t0 > 0:
+        cap.set(cv2.CAP_PROP_POS_MSEC, t0 * 1000.0)
+    rows = []
+    for _ in range(max(1, samples)):
+        ok, frame = cap.read()
+        if not ok:
+            break
+        rows.append({side: classify_digit(frame[y1:y2, x1:x2])
+                     for side, (x1, y1, x2, y2) in boxes.items()})
+    cap.release()
+    out = {}
+    for side in ("home", "away"):
+        vals = [r[side] for r in rows if r[side] is not None]
+        if vals:
+            out[side] = max(set(vals), key=vals.count)
+    return out
 
 
 def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
@@ -148,10 +181,31 @@ def detect_score_flips(video, t0: float = 0.0, duration: float | None = None,
         proc.kill()
         proc.wait()
 
-    expected = {"home": 0, "away": 0, **(start_score or {})}
+    debug = os.getenv("FC_SCORE_DEBUG") == "1"
+    if debug:
+        print(f"  [score] first rows {digits[:6]}")
+
+    def _mode(values):
+        vals = [v for v in values if v is not None]
+        if not vals:
+            return 0
+        return max(set(vals), key=vals.count)
+
+    provided = start_score or {}
+    supplied = any(int(provided.get(s, 0) or 0) > 0
+                   for s in ("home", "away"))
+    if supplied:
+        expected = {"home": 0, "away": 0, **provided}
+    else:
+        # A short clip can start mid-match. Read the score already on the
+        # board from the first few samples instead of assuming 0-0.
+        probe = digits[:3]
+        expected = {s: _mode([row.get(s) for row in probe])
+                    for s in ("home", "away")}
+        if debug:
+            print(f"  [score] inferred start {expected}")
     state = {s: {"run": 0, "start": None} for s in ("home", "away")}
     anchors: list[ScoreAnchor] = []
-    debug = os.getenv("FC_SCORE_DEBUG") == "1"
     for i, row in enumerate(digits):
         for side in ("home", "away"):
             want = expected[side] + 1
