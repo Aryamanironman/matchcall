@@ -1,0 +1,5 @@
+ultralytics==8.4.175
+clearml>=1.16
+pandas
+pyyaml
+opencv-python-headless
