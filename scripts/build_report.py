@@ -389,6 +389,10 @@ runs YOLO26x (59.0 M parameters) and YOLOv5lu (53 M) sequentially, registers
 each checkpoint, and returns <code>best.pt</code> for both. The pipeline can
 then be rerun with <code>--tracker-weights &lt;best.pt&gt;</code> to measure the
 change in ball detection, possession and the rendered overlay.</p>
+<p class="sub">This run has <b>not started</b>: it needs an AWS account with an
+S3 bucket and ClearML keys. Until it finishes, this report cannot show a
+100-epoch YOLO result or a YOLO26 comparison, and the YOLOv5lu section above
+remains the paused 33/100 checkpoint.</p>
 </section>
 
 <section>
