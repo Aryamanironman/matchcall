@@ -9,6 +9,7 @@ snapshot, then writes a single self-contained HTML file to
 from __future__ import annotations
 
 import base64
+import csv
 import datetime as dt
 import html
 import json
@@ -33,6 +34,39 @@ e = html.escape
 
 def fmt(v, n=3):
     return "—" if v is None else f"{v:.{n}f}"
+
+
+def yolo26_summary() -> dict | None:
+    """Read the completed local YOLO26n run, if it exists."""
+    run = settings.models_dir / "yolo26" / "yolo26n_v1_640"
+    csv_path = run / "results.csv"
+    if not csv_path.exists():
+        return None
+    with csv_path.open(newline="", encoding="utf-8") as fh:
+        rows = [{k.strip(): v for k, v in r.items()} for r in csv.DictReader(fh)]
+    if not rows:
+        return None
+
+    def fl(row, key):
+        try:
+            return float(row[key])
+        except (KeyError, ValueError):
+            return None
+
+    best = max(rows, key=lambda r: fl(r, "metrics/mAP50-95(B)") or -1)
+    metrics_path = run / "val_metrics.json"
+    metrics = (json.loads(metrics_path.read_text(encoding="utf-8"))
+               if metrics_path.exists() else {})
+    return {
+        "run": run,
+        "epochs": len(rows),
+        "hours": (fl(rows[-1], "time") or 0) / 3600,
+        "precision": fl(best, "metrics/precision(B)"),
+        "recall": fl(best, "metrics/recall(B)"),
+        "mAP50": fl(best, "metrics/mAP50(B)"),
+        "mAP50_95": fl(best, "metrics/mAP50-95(B)"),
+        "metrics": metrics,
+    }
 
 
 def line_svg(series, *, width=760, height=230, y_max=None, y_fmt=".2f",
@@ -129,6 +163,52 @@ def main() -> None:
     moments = d.get("moments") or []
     goals = [m for m in moments if m.get("kind") == "goal"]
     now = dt.datetime.now().strftime("%d %b %Y, %H:%M")
+
+    y26 = yolo26_summary()
+    y26_section = ""
+    if y26:
+        pc50 = y26["metrics"].get("per_class_AP50", {})
+        pc = y26["metrics"].get("per_class_mAP50_95", {})
+        pp = y26["metrics"].get("per_class_precision", {})
+        pr = y26["metrics"].get("per_class_recall", {})
+        pc_rows = "".join(
+            f"<tr><td>{e(name)}</td><td>{fmt(pc50.get(name))}</td>"
+            f"<td>{fmt(pc.get(name))}</td><td>{fmt(pp.get(name))}</td>"
+            f"<td>{fmt(pr.get(name))}</td></tr>"
+            for name in ("Player", "Ball", "Referee"))
+        y26_section = f"""
+<section>
+<h2>YOLO26n — local speed run.</h2>
+<p class="sub">2.39 M parameters · 640 px · {y26['epochs']} epochs ·
+{y26['hours']:.2f} h on the RTX 2050 · ClearML task
+<a href="https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8/tasks/63128dc3e2b64a69bd31cee4982c707a/output/log">63128dc3</a>.
+This run was sized to finish inside a four-hour window, so it is a nano-model
+result rather than the planned full-size comparison.</p>
+<div class="grid g4">
+{card(fmt(y26['mAP50']), 'mAP50', 'lime')}
+{card(fmt(y26['mAP50_95']), 'mAP50–95', 'sky')}
+{card(fmt(y26['precision']), 'precision')}
+{card(fmt(y26['recall']), 'recall')}
+</div>
+<table style="margin-top:16px"><thead><tr><th>Class</th><th>AP50</th>
+<th>AP50–95</th><th>Precision</th><th>Recall</th></tr></thead>
+<tbody>{pc_rows}</tbody></table>
+<div class="note"><b>How to read this.</b> YOLO26n has 2.39 M parameters and
+trained for {y26['epochs']} epochs; the paused YOLOv5lu run has 53 M parameters
+and 33 epochs. YOLO26n edges the aggregate mAP50 ({fmt(y26['mAP50'])} vs
+{fmt(b.get('mAP50'))}) and mAP50–95 ({fmt(y26['mAP50_95'])} vs
+{fmt(b.get('mAP50_95'))}), but its Ball AP50–95 is only
+{fmt(pc.get('Ball'))}, and on the 10 s goal overlay it keeps the ball in
+22/40 frames versus 38/40 for Aryaman YOLOv5lu. This is not evidence that
+YOLO26 is superior overall; the controlled 640 px / 100-epoch SageMaker run
+is still pending.</div>
+<div class="links">
+<a href="commented_highlights/yolo26n_comparison/annotated_goal_possession.mp4">YOLO26n tracking overlay</a>
+<a href="../models/yolo26/yolo26n_v1_640/results.csv">results.csv (local)</a>
+<a href="https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8/tasks/63128dc3e2b64a69bd31cee4982c707a/output/log">ClearML task</a>
+</div>
+</section>
+"""
 
     loss_svg = line_svg([
         {"name": "box", "color": C["s1"],
@@ -346,6 +426,7 @@ parameters, metrics, plots and the registered model.</p>
 <a href="../models/aryaman_yolo/aryaman_yolov5lu_football/results.csv">results.csv (local)</a></div>
 </section>
 
+{y26_section}
 <section>
 <h2>{llm_title}.</h2>
 <p class="sub">{e(l.get('method') or 'LoRA, completion-only loss')} on
@@ -389,10 +470,11 @@ runs YOLO26x (59.0 M parameters) and YOLOv5lu (53 M) sequentially, registers
 each checkpoint, and returns <code>best.pt</code> for both. The pipeline can
 then be rerun with <code>--tracker-weights &lt;best.pt&gt;</code> to measure the
 change in ball detection, possession and the rendered overlay.</p>
-<p class="sub">This run has <b>not started</b>: it needs an AWS account with an
-S3 bucket and ClearML keys. Until it finishes, this report cannot show a
-100-epoch YOLO result or a YOLO26 comparison, and the YOLOv5lu section above
-remains the paused 33/100 checkpoint.</p>
+<p class="sub">The full-size comparison has <b>not started</b>: it needs an AWS
+account with an S3 bucket and ClearML keys. The local YOLO26n speed run above
+is complete, but it is not a like-for-like replacement for this 640 px /
+100-epoch large/full test, and the YOLOv5lu section above remains the paused
+33/100 checkpoint.</p>
 </section>
 
 <section>

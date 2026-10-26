@@ -61,8 +61,13 @@ def main() -> None:
     if not weights.exists():
         raise SystemExit(f"weights missing: {weights}")
     is_aryaman = "aryaman" in str(weights).lower()
-    label = ("Aryaman YOLOv5lu · V1 fine-tune" if is_aryaman
-             else "FootballVision yolov5su")
+    if is_aryaman:
+        label = "Aryaman YOLOv5lu · V1 fine-tune"
+    elif "yolo26" in str(weights).lower():
+        run = weights.parent.parent.name
+        label = f"{run} · Ultralytics 8.4"
+    else:
+        label = "FootballVision yolov5su"
     print(f"weights: {weights} ({label})", flush=True)
 
     tracker = FootballVisionTracker(weights=weights, conf=0.15,
@@ -101,8 +106,7 @@ def main() -> None:
         "model": label,
         "weights": str(weights),
         "weights_mtime": weights.stat().st_mtime if weights.exists() else None,
-        "detector": "YOLOv5lu (Aryaman V1 fine-tune)" if is_aryaman
-                    else "FootballVision yolov5su",
+        "detector": label,
         "ball_tracking": (
             "raw ball detections + bounded linear interpolation, following "
             "FootballVision trackers/tracker.py; max gap 16 frames, "
