@@ -191,6 +191,7 @@ function lineChart(host, cfg) {
 
 let reel = null;
 let trackingUrl = null;
+let yolo26Url = null;
 
 function momentHTML(m) {
   const kind = String(m.kind || 'moment');
@@ -251,10 +252,18 @@ function setupReel() {
       || '/media/commented_highlights/commented_highlights_v4.mp4'],
     ['#tabTracking', () => trackingUrl
       || '/media/commented_highlights/annotated_goal_possession.mp4'],
+    ['#tabYolo26', () => yolo26Url
+      || '/media/commented_highlights/yolo26n_comparison/annotated_goal_possession.mp4'],
   ];
+  const notes = {
+    '#tabReel': '18 s clips · Fish-voiced reel',
+    '#tabTracking': 'Aryaman YOLOv5lu · players, ball, teams, possession',
+    '#tabYolo26': 'YOLO26n · 2.39M params · 640 px · comparison overlay',
+  };
   tabs.forEach(([sel, getSrc]) => {
     $(sel).addEventListener('click', () => {
       tabs.forEach(([s]) => $(s).setAttribute('aria-pressed', String(s === sel)));
+      $('#trackingNote').textContent = notes[sel] || '';
       v.src = getSrc();
       v.load();
       v.play().catch(() => {});
@@ -280,6 +289,7 @@ function renderTraining(d) {
   const l = d.llm || {};
   const t = d.tracking || {};
   trackingUrl = t.annotated_url || trackingUrl;
+  yolo26Url = t.yolo26_url || yolo26Url;
 
   const state = y.status || 'queued';
   const running = state === 'running' || state === 'starting';
