@@ -325,11 +325,19 @@ class FootballVisionTracker:
 def make_detector():
     """Return the FootballVision tracker unless the legacy path is forced.
 
-    The demo's detector is Aryaman's fine-tuned YOLOv5lu (with ByteTrack,
+    The demo's detector is the fine-tuned V1 checkpoint (with ByteTrack,
     teams and possession), so the default uses it for the action-spotting
     scan too. Set ``FC_DETECTOR=legacy`` to use the faster project YOLOv8
-    model for a whole-match scan instead.
+    model for a whole-match scan instead. ``FC_DETECTOR_WEIGHTS`` selects a
+    specific checkpoint, e.g. the YOLO26n run.
     """
+    explicit = os.getenv("FC_DETECTOR_WEIGHTS", "").strip()
+    if explicit:
+        try:
+            return FootballVisionTracker(weights=Path(explicit))
+        except Exception as e:  # noqa: BLE001
+            print(f"  [fv] explicit weights unavailable "
+                  f"({type(e).__name__}: {e}) — using the default detector")
     mode = os.getenv("FC_DETECTOR", "auto").strip().lower()
     if mode in ("footballvision", "fv", "auto"):
         try:

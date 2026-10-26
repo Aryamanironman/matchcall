@@ -392,13 +392,14 @@ function renderTraining(d) {
     ckpt && `<span class="muted" style="font-size:11px">${esc(ckpt)}${rank ? ' · rank ' + esc(rank) : ''}</span>`,
   ].filter(Boolean).join('');
 
-  // pipeline card + tracking note reflect the real model
+  // pipeline card + tracking note reflect the live detector
+  const liveDet = t.live_detector || 'Aryaman YOLOv5lu';
   if (t.weights_ready) {
-    $('#pipeTracker').textContent = 'Aryaman YOLOv5lu';
-    $('#trackingNote').textContent = 'Aryaman YOLOv5lu · players, ball, teams, possession';
+    $('#pipeTracker').textContent = liveDet;
+    $('#trackingNote').textContent = `${liveDet} · players, ball, teams, possession`;
   } else {
-    $('#pipeTracker').textContent = 'YOLOv5lu · training';
-    $('#trackingNote').textContent = 'FootballVision checkpoint · Aryaman YOLOv5lu training';
+    $('#pipeTracker').textContent = 'YOLO · training';
+    $('#trackingNote').textContent = 'FootballVision checkpoint · training';
   }
 
   const cl = d.clearml || {};
