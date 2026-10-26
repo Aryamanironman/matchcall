@@ -27,16 +27,23 @@ click-run Studio session. It auto-creates/uses the default SageMaker bucket,
 finds and uploads `V1.zip`, embeds the training source, and runs both models.
 You do **not** need to know a bucket name.
 
-1. Open it in SageMaker Studio.
-2. Drag `data/V1.zip` (1.34 GB) next to the notebook (or into
-   `/home/ec2-user/SageMaker/`).
-3. Paste your ClearML access and secret keys into the credential cell once.
+1. Copy your ClearML config next to the notebook (one command):
+
+   ```powershell
+   Copy-Item "$env:USERPROFILE\clearml.conf" training/aws/clearml_private.conf
+   ```
+
+   Alternatively, paste the access/secret values into the credential cell.
+2. Open the notebook in SageMaker Studio.
+3. Drag `data/V1.zip` (1.34 GB) and `clearml_private.conf` next to the
+   notebook (or into `/home/ec2-user/SageMaker/`).
 4. **Run All**.
 
-The file is ignored by git because it holds ClearML keys. Do not commit,
-share, or leave it in a public location; delete it from Studio when finished.
-The tracked `yolo26_sagemaker.ipynb` remains the safe version that prompts for
-keys at runtime.
+Both the notebook and `clearml_private.conf` are ignored by git because they
+can hold ClearML keys. Do not commit, share, or leave them in a public
+location; delete them from Studio when finished. The tracked
+`yolo26_sagemaker.ipynb` remains the safe version that prompts for keys at
+runtime.
 
 ## Steps
 

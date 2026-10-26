@@ -23,6 +23,8 @@ data/soccerreplay/
 data/commentator_train_v4.jsonl
 data/commentator_valid_v4.jsonl
 
-# private SageMaker notebook with embedded ClearML keys - never commit
+# private SageMaker notebook and local ClearML config - never commit
 training/aws/*private*.ipynb
 training/aws/*autopilot*.ipynb
+training/aws/clearml_private.conf
+training/aws/clearml.conf
