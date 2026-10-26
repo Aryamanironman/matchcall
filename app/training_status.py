@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import json
 import re
+import subprocess
 import time
 from pathlib import Path
 
@@ -292,6 +293,30 @@ def _media_url(name: str) -> str:
     return url
 
 
+_DURATION_CACHE: dict[tuple[str, int], float | None] = {}
+
+
+def _media_seconds(name: str) -> float | None:
+    """Real duration of a rendered reel, cached by path + mtime."""
+    path = DEMO_DIR / name
+    try:
+        key = (str(path), int(path.stat().st_mtime))
+    except OSError:
+        return None
+    if key not in _DURATION_CACHE:
+        seconds = None
+        try:
+            out = subprocess.run(
+                [settings.ffprobe, "-v", "error", "-show_entries",
+                 "format=duration", "-of", "default=nw=1:nk=1", str(path)],
+                capture_output=True, text=True, timeout=15, check=True)
+            seconds = round(float(out.stdout.strip()), 1)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            seconds = None
+        _DURATION_CACHE[key] = seconds
+    return _DURATION_CACHE[key]
+
+
 def demo_status() -> dict:
     v4 = DEMO_DIR / "highlights_v4.json"
     src = v4 if v4.exists() else DEMO_DIR / "highlights.json"
@@ -308,17 +333,17 @@ def demo_status() -> dict:
     transcript = ""
     if tpath.exists():
         transcript = tpath.read_text(encoding="utf-8", errors="replace")
+    reel_name = ("commented_highlights_v4.mp4" if v4.exists()
+                 else "commented_highlights.mp4")
     return {
         "available": True,
-        "video_url": _media_url(
-            "commented_highlights_v4.mp4" if v4.exists()
-            else "commented_highlights.mp4"),
+        "video_url": _media_url(reel_name),
         "tracking_url": _media_url("annotated_goal_possession.mp4"),
         "moments": moments,
         "transcript": transcript,
         "clip_len": clip_len,
         "clips": hl.get("clips"),
-        "reel_seconds": hl.get("reel_seconds"),
+        "reel_seconds": _media_seconds(reel_name) or hl.get("reel_seconds"),
         "fish_model": hl.get("fish_model"),
         "fish_keyed": hl.get("fish_keyed"),
         "gpt2_lines": hl.get("gpt2_lines"),

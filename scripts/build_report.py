@@ -380,6 +380,18 @@ passed the grounding validator; accepted lines average
 </section>
 
 <section>
+<h2>Next: YOLO26 full vs YOLOv5 large.</h2>
+<p class="sub">A fair generation test is prepared in
+<code>training/aws/yolo26_sagemaker.ipynb</code>. Both models are the large/full
+tier, both train at 640 px for 100 epochs on the same V1 split, and both log
+every epoch to ClearML on an <code>ml.g5.2xlarge</code> instance. The notebook
+runs YOLO26x (59.0 M parameters) and YOLOv5lu (53 M) sequentially, registers
+each checkpoint, and returns <code>best.pt</code> for both. The pipeline can
+then be rerun with <code>--tracker-weights &lt;best.pt&gt;</code> to measure the
+change in ball detection, possession and the rendered overlay.</p>
+</section>
+
+<section>
 <h2>Reproduce.</h2>
 <pre>.venv\\Scripts\\python scripts\\make_commented_highlights.py --video "...ARG vs FRA..." --home Argentina --away France --start-score-home 2 --start-score-away 0 --minute-offset 35.33
 .venv\\Scripts\\python scripts\\train_aryaman_yolov5.py

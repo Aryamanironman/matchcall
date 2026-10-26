@@ -89,7 +89,7 @@
           <circle class="node-badge" cx="390" cy="188" r="21" stroke="var(--lime)"/>
           <text class="node-num" x="390" y="188" fill="var(--lime)">04</text>
           <text class="node-name" x="390" y="225">Commentary</text>
-          <text class="node-model" x="390" y="238">GPT-2 LoRA v3</text>
+          <text class="node-model" x="390" y="238">GPT-2 LoRA v4</text>
         </g>
         <g class="node">
           <circle class="node-badge" cx="280" cy="92" r="21" stroke="var(--coral)"/>
@@ -284,7 +284,7 @@
 
     <div class="model-card" id="llmCard">
       <div class="model-head">
-        <div><h3>GPT-2 LoRA v3</h3><div class="meta">completion-only loss · rank 16 · grounded corpus</div></div>
+        <div><h3>GPT-2 LoRA v4</h3><div class="meta">completion-only loss · rank 32 · SoccerReplay-1988 + grounded corpus</div></div>
         <span class="badge done" id="llmBadge">done</span>
       </div>
       <div class="metric-row" id="llmMetrics"></div>
@@ -293,6 +293,7 @@
       <div class="train-links" id="llmLinks"></div>
     </div>
   </div>
+  <div class="note" style="margin-top:16px"><b>Next run.</b> YOLO26 full (59 M) vs YOLOv5 large (53 M): both at 640 px for 100 epochs on the same V1 split, queued on SageMaker and logged to ClearML. Its curves, weights and the pipeline rerun will appear here.</div>
   <table class="ledger" id="clearmlTable" hidden></table>
   <div class="report-cta">
     <p><b>The full report.</b> Training curves, ClearML links, logs, the pipeline and the reel in one page.</p>
@@ -314,6 +315,6 @@
   </div>
 </footer>
 
-<script src="/app.js?v=20261020b" defer></script>
+<script src="/app.js?v=20261026" defer></script>
 </body>
 </html>
