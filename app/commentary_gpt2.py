@@ -213,10 +213,22 @@ _GOAL_STRONG = (
     "back of the net",
 )
 _GOAL_CONTRADICTIONS = (
-    "denied", "wide", "off target", "saved", "save", "blocked", "cleared",
-    "disallowed", "ruled out", "no goal", "goal kick", "missed",
-    "over the bar", "hit the post", "hit the bar", "past the post",
+    "denied", "deny", "denies", "wide", "off target", "saved", "save",
+    "saves", "block", "blocks", "blocked", "clear", "clears", "cleared",
+    "clearance", "disallowed", "ruled out", "no goal", "goal kick",
+    "missed", "over the bar", "hit the post", "hit the bar", "past the post",
 )
+
+
+def _phrase_in(text: str, phrases) -> bool:
+    """Substring for multi-word phrases; word boundaries for single words."""
+    for p in phrases:
+        if " " in p or "'" in p:
+            if p in text:
+                return True
+        elif re.search(rf"\b{re.escape(p)}\b", text):
+            return True
+    return False
 
 
 def _validate(line: str, features: dict, teams: dict, label: str,
@@ -246,9 +258,9 @@ def _validate(line: str, features: dict, teams: dict, label: str,
     if words is not None and not any(w in low for w in words):
         return False
     if label == "goal":
-        if any(p in low for p in _GOAL_CONTRADICTIONS):
+        if _phrase_in(low, _GOAL_CONTRADICTIONS):
             return False
-        if not any(w in low for w in _GOAL_STRONG):
+        if not _phrase_in(low, _GOAL_STRONG):
             return False
     hs = features.get("score_home")
     as_ = features.get("score_away")
