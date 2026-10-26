@@ -331,6 +331,10 @@ def main() -> None:
     ap.add_argument("--reuse-analysis", action="store_true", default=True)
     ap.add_argument("--reuse-score", action="store_true", default=True)
     ap.add_argument("--annotate", action="store_true", default=True)
+    ap.add_argument("--tracker-weights", default=None,
+                    help="detector used for clip tracking (default: Aryaman "
+                         "YOLOv5lu if present); pass the YOLO26 best.pt to "
+                         "rerun the pipeline with the new detector")
     args = ap.parse_args()
 
     video = Path(args.video)
@@ -364,7 +368,8 @@ def main() -> None:
          f"{[(m['kind'], round(m['t'], 1)) for m in moments]}")
 
     # ---- stages 2-5: per-moment enrichment, commentary, voice, render -------
-    tracker = FootballVisionTracker()
+    tracker = FootballVisionTracker(
+        weights=Path(args.tracker_weights) if args.tracker_weights else None)
     teams = {"home": args.home, "away": args.away}
     announcer = make_announcer(teams)
     tts_dir = out / "tts"

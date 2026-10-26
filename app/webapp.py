@@ -33,6 +33,15 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="Football Commentary Dubber")
 
 
+@app.middleware("http")
+async def _revalidate_shell(request, call_next):
+    """Keep the HTML shell out of the browser cache after a reel rebuild."""
+    response = await call_next(request)
+    if request.url.path in ("/", "/index.html"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 class Job:
     def __init__(self, filename: str, home: str, away: str, t0: float,
                  duration: float | None, orig_audio: bool,
