@@ -20,6 +20,24 @@ final weights. The notebook runs them sequentially on `ml.g5.2xlarge`
 - `requirements.txt` — installed by the SageMaker PyTorch container.
 - `build_notebook.py` — regenerates the notebook if you edit the cells.
 
+## Quickest path: the private autopilot notebook
+
+`yolo26_sagemaker_private.ipynb` is a local, gitignored copy made for a
+click-run Studio session. It auto-creates/uses the default SageMaker bucket,
+finds and uploads `V1.zip`, embeds the training source, and runs both models.
+You do **not** need to know a bucket name.
+
+1. Open it in SageMaker Studio.
+2. Drag `data/V1.zip` (1.34 GB) next to the notebook (or into
+   `/home/ec2-user/SageMaker/`).
+3. Paste your ClearML access and secret keys into the credential cell once.
+4. **Run All**.
+
+The file is ignored by git because it holds ClearML keys. Do not commit,
+share, or leave it in a public location; delete it from Studio when finished.
+The tracked `yolo26_sagemaker.ipynb` remains the safe version that prompts for
+keys at runtime.
+
 ## Steps
 
 1. **Put this folder in Studio** (upload `training/aws` or clone the repo).
