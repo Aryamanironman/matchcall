@@ -205,6 +205,20 @@ _EVENT_WORDS = {
 }
 
 
+_GOAL_STRONG = (
+    "goal", "it's in", "it is in", "buried", "net", "scores", "scored",
+    "scoring", "equaliser", "equalizer", "equalise", "equalised", "equalize",
+    "equalized", "make it", "made it", "levelled",
+    "levels", "erupts", "winner", "converted", "opened the scoring",
+    "back of the net",
+)
+_GOAL_CONTRADICTIONS = (
+    "denied", "wide", "off target", "saved", "save", "blocked", "cleared",
+    "disallowed", "ruled out", "no goal", "goal kick", "missed",
+    "over the bar", "hit the post", "hit the bar", "past the post",
+)
+
+
 def _validate(line: str, features: dict, teams: dict, label: str,
               team: str = "") -> bool:
     """Reject lines that claim facts the pipeline did not observe."""
@@ -231,6 +245,11 @@ def _validate(line: str, features: dict, teams: dict, label: str,
     words = _EVENT_WORDS.get(label)
     if words is not None and not any(w in low for w in words):
         return False
+    if label == "goal":
+        if any(p in low for p in _GOAL_CONTRADICTIONS):
+            return False
+        if not any(w in low for w in _GOAL_STRONG):
+            return False
     hs = features.get("score_home")
     as_ = features.get("score_away")
     minute = int(features.get("minute", 0) or 0)
