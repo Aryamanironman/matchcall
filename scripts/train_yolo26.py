@@ -105,7 +105,7 @@ def main() -> None:
             logger = task.get_logger()
             try:
                 logger.report_text(
-                    f"YOLO26n | train {manifest['train_images']} / "
+                    f"{pretty} | train {manifest['train_images']} / "
                     f"val {manifest['val_images']} | imgsz {args.imgsz} | "
                     f"batch {args.batch} | epochs {args.epochs}")
             except Exception:  # noqa: BLE001
