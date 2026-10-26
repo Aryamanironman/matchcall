@@ -69,7 +69,8 @@ except Exception:
     print()
     print(f'curl -X PUT --upload-file "data/V1.zip" "{url}"')
     print()
-    raise SystemExit("waiting for the dataset upload")""")
+    raise RuntimeError("dataset not uploaded yet - run the curl command above, "
+                       "then re-run this cell")""")
 
 md("""If the V1 zip is already on the Studio filesystem:
 
