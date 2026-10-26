@@ -22,8 +22,6 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[2]  # C:\Users\asus\football-commentator
 
 PROJECT = "Football Commentator"
-TASK_NAME = "Aryaman YOLO26n football detector — V1 fine-tune"
-MODEL_NAME = "aryaman-yolo26n-football"
 
 
 def _dataset_manifest(data_root: Path) -> dict:
@@ -61,6 +59,11 @@ def main() -> None:
     import torch
     from ultralytics import YOLO
 
+    tag = Path(args.base).stem
+    pretty = tag.replace("yolo26", "YOLO26").replace("yolov5lu", "YOLOv5lu")
+    task_name = f"Aryaman {pretty} football detector — V1 fine-tune"
+    model_name = f"aryaman-{tag}-football"
+
     data_root = Path(args.data)
     yaml_path = data_root / "data_aryaman.yaml"
     if not yaml_path.exists():
@@ -77,7 +80,7 @@ def main() -> None:
             from clearml import Task, TaskTypes
             task_train = getattr(TaskTypes, "training", None) or TaskTypes.custom
             task = Task.init(
-                project_name=PROJECT, task_name=TASK_NAME, task_type=task_train,
+                project_name=PROJECT, task_name=task_name, task_type=task_train,
                 output_uri=True, reuse_last_task_id=False,
                 tags=["aryaman", "yolo26", "football", "v1"],
             )
@@ -85,7 +88,7 @@ def main() -> None:
                 task.connect(vars(args))
                 task.connect(manifest, name="dataset")
                 task.set_user_properties(
-                    architecture="YOLO26n (Ultralytics 8.4, NMS-free end-to-end)",
+                    architecture=f"{pretty} (Ultralytics 8.4, NMS-free end-to-end)",
                     dataset="Roboflow football-players V1: 8,677 / 2,996, "
                             "classes Player/Ball/Referee",
                     comparison="same data/YAML/splits as Aryaman YOLOv5lu",
@@ -185,7 +188,7 @@ def main() -> None:
                 if p.exists():
                     task.upload_artifact(name, artifact_object=str(p))
             if best.exists():
-                om = OutputModel(task=task, name=MODEL_NAME)
+                om = OutputModel(task=task, name=model_name)
                 om.update_weights(weights_filename=str(best),
                                   auto_delete_file=False)
                 try:
@@ -201,7 +204,7 @@ def main() -> None:
             (run_dir / "clearml_task.json").write_text(json.dumps({
                 "id": task.id,
                 "url": task.get_output_log_web_page(),
-                "name": TASK_NAME,
+                "name": task_name,
             }, indent=2), encoding="utf-8")
             print("ClearML task:", task.get_output_log_web_page(), flush=True)
         except Exception as e:  # noqa: BLE001
