@@ -1,8 +1,9 @@
 # Literature Review — Broadcast Football Video to Spoken Commentary
 
 **Project:** football-commentator (Aryaman)  
-**Date:** 26 October 2026  
-**Scope:** five-stage pipeline — action spotting/event classification → YOLO + ByteTrack tracking and team/possession enrichment → deterministic grounded-description layer → GPT-2 LoRA commentary with a grounding validator → Fish Audio TTS over match audio, with ClearML experiment tracking.
+**Date:** 27 October 2026  
+**Scope:** five-stage pipeline — action spotting/event classification → YOLO + ByteTrack tracking and team/possession enrichment → deterministic grounded-description layer → GPT-2 LoRA commentary with a grounding validator → Fish Audio TTS over match audio, with ClearML experiment tracking.  
+**Narrative synthesis:** [`docs/literature_review_narrative.md`](literature_review_narrative.md) — the flowing review that argues the gap; this document is the verified reading list and evidence base behind it.
 
 This document is a working literature review: a verified reading list, the themes that structure the field, and the gaps this project addresses. Every citation was checked against a publisher, arXiv, ACL Anthology, CVF, IEEE, ACM, DBLP, or official documentation; non-peer-reviewed sources are labelled.
 
