@@ -323,14 +323,14 @@ class FootballVisionTracker:
 
 
 def make_detector():
-    """Return the FootballVision tracker when explicitly configured.
+    """Return the FootballVision tracker unless the legacy path is forced.
 
-    The whole-match action-spotting pass is much faster with the project
-    YOLOv8 model, so the default stays legacy; set ``FC_DETECTOR=footballvision``
-    to use the FootballVision checkpoint for the full scan as well. The
-    highlights script always uses ``FootballVisionTracker`` on its 10 s clips.
+    The demo's detector is Aryaman's fine-tuned YOLOv5lu (with ByteTrack,
+    teams and possession), so the default uses it for the action-spotting
+    scan too. Set ``FC_DETECTOR=legacy`` to use the faster project YOLOv8
+    model for a whole-match scan instead.
     """
-    mode = os.getenv("FC_DETECTOR", "legacy").strip().lower()
+    mode = os.getenv("FC_DETECTOR", "auto").strip().lower()
     if mode in ("footballvision", "fv", "auto"):
         try:
             return FootballVisionTracker()
