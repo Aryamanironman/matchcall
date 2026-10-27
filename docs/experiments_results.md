@@ -2,6 +2,8 @@
 
 Generated from measured artifacts. Cost assumptions are explicit and are not vendor quotes.
 
+**Research-paper page:** [`docs/matchcall_experiments.html`](matchcall_experiments.html) · **PDF:** [`docs/Matchcall_Experiments.pdf`](Matchcall_Experiments.pdf)
+
 ## 1. AI vs human commentary
 
 Held-out SoccerReplay prompts (n=40). Human commentary is the reference; the template baseline uses the same facts.
