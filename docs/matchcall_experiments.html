@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Matchcall Experiments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#05110C; --panel:#0A2118; --panel2:#0E2C20;
+  --line:#1C3A2C; --line2:#2A4C3A;
+  --ink:#EAF7EE; --ink2:#B9CDBF; --muted:#8FA99B;
+  --lime:#C9FF4F; --coral:#FF6B3D; --sky:#4FE0D0; --gold:#F2C14E;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.62 var(--body);
+  -webkit-font-smoothing:antialiased}
+.wrap{width:min(1120px,100%);margin:auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--lime);text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+h1,h2,h3,p,figure,table{margin:0}
+h1,h2{font-family:var(--display);text-wrap:balance}
+h1{font-size:clamp(3.4rem,8.8vw,7rem);font-weight:800;line-height:.88;
+  letter-spacing:-.025em;max-width:900px}
+h2{font-size:clamp(1.8rem,4vw,2.7rem);font-weight:700;line-height:1.02;
+  letter-spacing:-.01em}
+h3{font-size:1.05rem;font-weight:600;line-height:1.35}
+.lead{color:var(--ink2);font-size:clamp(1.02rem,1.5vw,1.18rem);max-width:70ch}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.header{padding-block:42px 30px;border-bottom:1px solid var(--line)}
+.topline{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--muted)}
+.brand{color:var(--lime);font-weight:500;letter-spacing:.12em}
+.topline .date{margin-left:auto}
+.header h1{margin-top:26px}
+.header .lead{margin-top:20px}
+.byline{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;color:var(--muted);
+  font-family:var(--mono);font-size:11px}
+.stat-band{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  margin-top:28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{padding:16px 18px 14px;border-left:1px solid var(--line)}
+.stat:first-child{border-left:0}
+.stat b{display:block;font-family:var(--display);font-size:clamp(1.8rem,3.5vw,2.5rem);
+  line-height:1;font-weight:700;color:var(--lime)}
+.stat span{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.nav{display:flex;gap:20px;flex-wrap:wrap;padding-block:14px;border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:11px}
+.nav a{color:var(--ink2);text-decoration:none}
+.nav a:hover{color:var(--lime)}
+.section{border-top:1px solid var(--line);padding-block:42px}
+.section:first-of-type{border-top:0}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;
+  gap:18px;flex-wrap:wrap;margin-bottom:16px}
+.section-tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  color:var(--sky);text-transform:uppercase}
+.section-head h2{max-width:760px}
+.section-head .lead{margin-top:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.grid2>*,.grid3>*{min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);padding:18px 18px 16px}
+.panel.plain{background:transparent}
+.panel h3{color:var(--ink)}
+.panel .small{font-size:13px;color:var(--muted);margin-top:6px}
+.kicker{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.quote{font-size:15px;line-height:1.58;color:var(--ink2);margin-top:10px}
+.quote strong{color:var(--ink);font-weight:600}
+mark{background:transparent;color:inherit;border-bottom:2px solid var(--gold);padding-bottom:1px}
+mark.bad{border-color:var(--coral)}
+mark.good{border-color:var(--lime)}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{font-family:var(--mono);font-size:10px;padding:2px 7px;border:1px solid var(--line2);
+  color:var(--ink2);white-space:nowrap}
+.tag.good{border-color:var(--lime);color:var(--lime)}
+.tag.bad{border-color:var(--coral);color:var(--coral)}
+.tag.warn{border-color:var(--gold);color:var(--gold)}
+.table-wrap{overflow-x:auto;margin-top:14px}
+.table-wrap.wide table{min-width:620px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);text-align:left;font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line2)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.chart-title{display:flex;justify-content:space-between;align-items:baseline;
+  gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.chart-title h3{font-size:14px}
+.chart-note{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.bars{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.bar-line{display:grid;grid-template-columns:74px minmax(0,1fr) 58px;gap:10px;
+  align-items:center}
+.bar-label{font-size:12px;color:var(--muted)}
+.bar-track{height:7px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+.bar-fill{display:block;height:100%;background:var(--lime)}
+.bar-fill.tpl{background:var(--coral)}
+.bar-fill.sky{background:var(--sky)}
+.bar-value{font-family:var(--mono);font-size:11px;text-align:right;color:var(--ink2)}
+.log-chart{position:relative;margin-top:18px;padding:38px 16px 34px;
+  border:1px solid var(--line);background:transparent;overflow-x:auto}
+.log-line{position:relative;height:1px;background:var(--line2);margin:0 8px;min-width:420px}
+.log-tick{position:absolute;top:-4px;width:1px;height:9px;background:var(--line2)}
+.log-lab{position:absolute;top:14px;transform:translateX(-50%);font-family:var(--mono);
+  font-size:9.5px;color:var(--muted);white-space:nowrap}
+.log-dot{position:absolute;top:-6px;width:11px;height:11px;border-radius:50%;
+  transform:translateX(-50%);border:2px solid var(--bg)}
+.log-dot-label{position:absolute;top:-27px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:10px;color:var(--ink2);white-space:nowrap}
+.log-note{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);
+  font-size:10px;color:var(--muted)}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px}
+.timeline-wrap{overflow-x:auto;margin-top:16px;border:1px solid var(--line);background:#07160F}
+.timeline{display:block;min-width:760px;width:100%;height:auto}
+.verdict{border-left:3px solid var(--lime);padding:2px 0 2px 16px;margin-top:20px}
+.verdict p{color:var(--ink2);max-width:76ch}
+.verdict strong{color:var(--ink)}
+.callout{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;margin-top:16px;
+  padding:16px 18px;border:1px solid var(--line);background:var(--panel)}
+.callout b{font-family:var(--display);font-size:2.2rem;line-height:1;color:var(--lime)}
+.callout span{color:var(--ink2);font-size:14px}
+.figure{margin-top:18px;border:1px solid var(--line);background:var(--panel)}
+.figure img{display:block;width:100%;height:auto;max-width:100%}
+.figure figcaption{padding:10px 12px;font-family:var(--mono);font-size:10.5px;
+  color:var(--muted);line-height:1.5}
+.note{font-size:13px;color:var(--muted);margin-top:12px;max-width:78ch}
+.note strong{color:var(--ink2)}
+.footer{border-top:1px solid var(--line);padding-block:24px 40px;margin-top:10px;
+  font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.7}
+code{font-family:var(--mono);font-size:.92em;color:var(--sky)}
+pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
+  background:#07160F;border:1px solid var(--line);padding:14px;overflow-x:auto}
+.small-list{display:grid;gap:10px;margin-top:12px}
+.small-list div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;
+  border-top:1px solid var(--line);padding-top:9px}
+.small-list dt,.small-list .k{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.small-list .v{font-size:13.5px;color:var(--ink2)}
+@media(max-width:820px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .stat-band{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat:nth-child(3){border-left:0}
+}
+@media(max-width:520px){
+  .bar-line{grid-template-columns:64px minmax(0,1fr) 52px}
+  .small-list div{grid-template-columns:1fr;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+@media print{
+  :root{color-scheme:light;--bg:#fff;--panel:#f6f8f6;--panel2:#eef2ee;
+    --line:#d8ded9;--line2:#c3ccc5;--ink:#111;--ink2:#333;--muted:#666;
+    --lime:#2f7a00;--coral:#b23b1f;--sky:#006b73;--gold:#8a5a00}
+  body{background:#fff;color:#111;font-size:10.5pt;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{width:100%;padding-left:0;padding-right:0}
+  .header{padding-block:0 18px}
+  h1{font-size:34pt}
+  h2{font-size:22pt}
+  .section{padding-block:20px}
+  .nav{display:none}
+  .panel,.figure,.timeline-wrap,.callout,.bar-line,.log-chart{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  #cost{break-before:page}
+  .timeline-wrap,.table-wrap,.log-chart{overflow:visible!important}
+  .timeline-wrap .timeline,svg.timeline{min-width:0!important;width:100%!important}
+  .log-chart{background:#f6f8f6!important;border-color:#d8ded9!important}
+  .table-wrap.wide table{min-width:0}
+  .log-line{min-width:0}
+  a{color:#111;text-decoration:none}
+  .footer{color:#555}
+}
+@page{margin:14mm}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="header">
+  <div class="topline">
+    <span class="brand">MATCHCALL</span>
+    <span>EXPERIMENT REPORT</span>
+    <span class="date">27 OCT 2026</span>
+  </div>
+  <h1>Four comparisons,<br>one pipeline.</h1>
+  <p class="lead">A five-stage football commentary system, measured against human commentary,
+    live constraints, event annotations and production cost. The results are mixed in a useful
+    way: the expensive parts are cheap, the goal calls work, and the parts that still fail are
+    specific enough to name.</p>
+  <div class="byline">
+    <span>Aryaman</span><span>·</span><span>football-commentator</span><span>·</span>
+    <span>commit 7f1a826</span><span>·</span><span>64.5-min ARG–FRA second half</span>
+  </div>
+  <div class="stat-band" aria-label="Headline measurements">
+    <div class="stat"><b>38/40</b><span>v4 lines accepted by the grounding validator</span></div>
+    <div class="stat"><b>2/2</b><span>goals found, with precision and recall 1.00</span></div>
+    <div class="stat"><b>0.40</b><span>overall event recall at ±1 min</span></div>
+    <div class="stat"><b>$0.39</b><span>cloud compute for a 64.5-min match</span></div>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Sections">
+  <a href="#setup">Setup</a>
+  <a href="#ai-human">AI vs human</a>
+  <a href="#live">Live vs pre-recorded</a>
+  <a href="#events">Event spotting</a>
+  <a href="#cost">Cost</a>
+  <a href="#discussion">Discussion</a>
+</nav>
+
+<main>
+
+<section class="section" id="setup">
+  <div class="section-head">
+    <div>
+      <div class="section-tag">Test setup</div>
+      <h2>What was actually measured</h2>
+      <p class="lead">All numbers below come from the corrected full-match run and the held-out
+        evaluation set. The reference moments are the ten curated moments from the earlier reel,
+        not an exhaustive independent annotation; that distinction is kept explicit throughout.</p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel plain">
+      <div class="kicker">PIPELINE</div>
+      <div class="small-list">
+        <div><span class="k">Perception</span><span class="v">YOLO26n + ByteTrack, jersey clustering, possession, bounded ball interpolation.</span></div>
+        <div><span class="k">Event layer</span><span class="v">Score-bug anchors, motion-gated window scan, ResNet-18 classifier, crowd-audio rise.</span></div>
+        <div><span class="k">Facts</span><span class="v">Deterministic score, minute, ball zone, possession and event-team sheet.</span></div>
+        <div><span class="k">Language</span><span class="v">GPT-2 LoRA v4, validator, grounded template fallback.</span></div>
+        <div><span class="k">Speech</span><span class="v">Fish Audio s2.1-pro-free, event-conditioned pacing, ffmpeg mix.</span></div>
+      </div>
+    </div>
+    <div class="panel plain">
+      <div class="kicker">MODELS AND RUN</div>
+      <div class="small-list">
+        <div><span class="k">YOLO26n</span><span class="v">2.39 M parameters, 640 px, 50 epochs, 2.70 h on an RTX 2050 4 GB.</span></div>
+        <div><span class="k">GPT-2 v4</span><span class="v">LoRA r=32, 3 epochs, 2,481 steps, final loss 0.779.</span></div>
+        <div><span class="k">Full match</span><span class="v">64.5 min, 43 commentary lines, 43/43 voiced, 19.4 min wall time.</span></div>
+        <div><span class="k">Evaluation</span><span class="v">40 held-out SoccerReplay prompts; 10 curated event moments; one 5-min causal chunk.</span></div>
+        <div><span class="k">Hardware</span><span class="v">One consumer GPU, one laptop, no cloud during inference.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="ai-human">
+  <div class="section-head">
+    <div>
+      <div class="section-tag">Comparison 1</div>
+      <h2>AI vs human commentary</h2>
+      <p class="lead">GPT-2 v4 is closer to human commentary than the template baseline on
+        ROUGE-L and METEOR, and it writes human-length lines. It is still not factually reliable:
+        the examples below show invented detail, wrong teams and a missed goal.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel plain">
+      <div class="chart-title"><h3>Overlap with the human reference</h3><span class="chart-note">higher is better · axis 0–0.25</span></div>
+      <div class="bars" aria-label="ROUGE-L and METEOR scores">
+        <div class="bar-line"><span class="bar-label">ROUGE-L · v4</span><div class="bar-track"><span class="bar-fill" style="width:74%"></span></div><span class="bar-value">0.185</span></div>
+        <div class="bar-line"><span class="bar-label">ROUGE-L · tpl</span><div class="bar-track"><span class="bar-fill tpl" style="width:37%"></span></div><span class="bar-value">0.093</span></div>
+        <div class="bar-line"><span class="bar-label">METEOR · v4</span><div class="bar-track"><span class="bar-fill" style="width:83%"></span></div><span class="bar-value">0.207</span></div>
+        <div class="bar-line"><span class="bar-label">METEOR · tpl</span><div class="bar-track"><span class="bar-fill tpl" style="width:11%"></span></div><span class="bar-value">0.027</span></div>
+      </div>
+      <div class="chart-title" style="margin-top:22px"><h3>Line length</h3><span class="chart-note">words per line · axis 0–45</span></div>
+      <div class="bars" aria-label="Average line length">
+        <div class="bar-line"><span class="bar-label">GPT-2 v4</span><div class="bar-track"><span class="bar-fill" style="width:90%"></span></div><span class="bar-value">40.5</span></div>
+        <div class="bar-line"><span class="bar-label">Human</span><div class="bar-track"><span class="bar-fill sky" style="width:71%"></span></div><span class="bar-value">31.9</span></div>
+        <div class="bar-line"><span class="bar-label">Template</span><div class="bar-track"><span class="bar-fill tpl" style="width:16%"></span></div><span class="bar-value">7.4</span></div>
+      </div>
+      <div class="legend"><span><i style="background:var(--lime)"></i>GPT-2 v4</span><span><i style="background:var(--coral)"></i>Template</span><span><i style="background:var(--sky)"></i>Human</span></div>
+    </div>
+    <div class="panel plain">
+      <div class="chart-title"><h3>Exact scores</h3><span class="chart-note">n=40 held-out prompts</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Metric</th><th class="num">GPT-2 v4</th><th class="num">Template</th></tr></thead>
+          <tbody>
+            <tr><td>BLEU-1</td><td class="num">0.0300</td><td class="num">0.0103</td></tr>
+            <tr><td>BLEU-2</td><td class="num">0.0014</td><td class="num">0.0020</td></tr>
+            <tr><td>BLEU-4</td><td class="num">0.000304</td><td class="num">0.001038</td></tr>
+            <tr><td>ROUGE-L</td><td class="num">0.1845</td><td class="num">0.0931</td></tr>
+            <tr><td>METEOR</td><td class="num">0.2066</td><td class="num">0.0269</td></tr>
+            <tr><td>Average words</td><td class="num">40.5</td><td class="num">7.4</td></tr>
+            <tr><td>Grounding accepted</td><td class="num">38/40</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">BLEU-4 is near zero for both systems. ROUGE-L and METEOR favour GPT-2;
+        overlap metrics do not measure whether a line is true. The human reference averages 31.9
+        words, so GPT-2 is slightly longer than the humans, not shorter.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:30px">Three records, three different failures</h3>
+  <p class="note">Quoted verbatim from the 40 held-out records. Annotation shows the difference
+    that matters, not a cherry-picked “best” line.</p>
+
+  <div class="grid3" style="margin-top:14px">
+    <div class="panel">
+      <div class="kicker">CLOSEST TO HUMAN · pass / West Ham</div>
+      <div class="quote"><strong>Human</strong><br>Wonderful movement by West Ham. The players are holding possession, mostly exchanging one-touch passes. They control the pace of the game now. The midfielder attempts to feed the defender with a chip pass, but the goalkeeper reacts well and comes off his line to intercept.</div>
+      <div class="quote"><strong>GPT-2 v4</strong><br>West Ham are showcasing great team work by exchanging some short passes and one-two passing balls with one another to create new attacking opportunities. The midfielder is unlucky enough not to shoot from the edge of the box as <mark class="bad">his effort flies just wide of the right post</mark>.</div>
+      <div class="quote"><strong>Template</strong><br>Patient stuff from West Ham, switching the play smartly.</div>
+      <div class="tag-row"><span class="tag good">team correct</span><span class="tag warn">length 48 vs 56</span><span class="tag bad">invented shot</span></div>
+    </div>
+    <div class="panel">
+      <div class="kicker">WRONG TEAM · corner / Eintracht Frankfurt</div>
+      <div class="quote"><strong>Human</strong><br>The forward strikes the ball towards goal, but it fails to reach the target after being well blocked by one of the defenders. Corner kick. Eintracht Frankfurt will have an opportunity.</div>
+      <div class="quote"><strong>GPT-2 v4</strong><br><mark class="bad">Napoli</mark> failed to take advantage of the corner as their opponents were alert and averted the threat at the last moment! The ball goes out of play. Neat result from the forward's attempted effort with a cross into the box resulting in a dangerous clearance.</div>
+      <div class="quote"><strong>Template</strong><br>The delivery comes in for <mark class="bad">Napoli</mark>!</div>
+      <div class="tag-row"><span class="tag bad">wrong team</span><span class="tag good">corner topic</span></div>
+    </div>
+    <div class="panel">
+      <div class="kicker">MISSED GOAL · goal / B. Monchengladbach</div>
+      <div class="quote"><strong>Human</strong><br>The goal stands! That took a long time for the referee to decide. The relieved B. Monchengladbach players can finally celebrate.</div>
+      <div class="quote"><strong>GPT-2 v4</strong><br>The forward races towards goal but the defender gets back well to make a challenge. One of the defending players reacts superbly to get his teammates down and intercepts one. <mark class="bad">A promising stop for Inter! Corner kick from long range.</mark></div>
+      <div class="quote"><strong>Template</strong><br><mark class="good">GOAL!</mark> <mark class="bad">Inter</mark> make it count — sheer precision at a vital time!</div>
+      <div class="tag-row"><span class="tag bad">AI misses the goal</span><span class="tag good">template calls it</span><span class="tag bad">both wrong team</span></div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <p><strong>Verdict.</strong> GPT-2 is the better surface realiser: longer, more varied, closer
+      to human overlap. It is not the better fact layer. The validator accepts 95% of lines, but
+      acceptance means “passes the grounding checks,” not “is correct.” The template is shorter
+      and safer, yet its team attribution fails in the same record, which points to the shared
+      feature layer as well as the language model.</p>
+  </div>
+</section>
+
+<section class="section" id="live">
+  <div class="section-head">
+    <div>
+      <div class="section-tag">Comparison 2</div>
+      <h2>Live vs pre-recorded</h2>
+      <p class="lead">The full-context run gets both goals right. A 5-minute causal chunk is faster
+        to first line, but it attributes both goals to the home side and invents an earlier goal.
+        The current system is pre-recorded only; chunking alone does not make it live.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel" style="border-color:var(--line2)">
+      <div class="kicker" style="color:var(--lime)">PRE-RECORDED · FULL CONTEXT · CORRECT</div>
+      <div class="quote">[44:18] <strong>(goal)</strong> GOAL! <mark class="good">France</mark> make it count — sheer precision at a vital time!</div>
+      <div class="quote">[45:27] <strong>(goal)</strong> IT'S A GOAL! Clinical from <mark class="good">France</mark> — the keeper had no chance!</div>
+      <div class="tag-row"><span class="tag good">2/2 goals</span><span class="tag good">team correct</span><span class="tag warn">first line at 16.6 min</span></div>
+    </div>
+    <div class="panel" style="border-color:var(--coral)">
+      <div class="kicker" style="color:var(--coral)">LIVE-LIKE · 5-MIN CHUNK · WRONG</div>
+      <div class="quote">[02:01] <strong>(goal)</strong> GOAL! <mark class="bad">Argentina</mark> make it count — sheer precision at a vital time!</div>
+      <div class="quote">[04:05] <strong>(goal)</strong> IT'S A GOAL! Clinical from <mark class="bad">Argentina</mark> — the keeper had no chance!</div>
+      <div class="tag-row"><span class="tag bad">wrong side</span><span class="tag bad">false early goal</span><span class="tag good">first line at 4.8 min</span></div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:14px"><strong>Ground truth from the score-bug reader:</strong>
+    the two anchors in the chunk are <code>away 44:33</code> and <code>away 45:42</code>; the
+    broadcast score flips 2–1 to 2–2. The chunk's generated lines still say Argentina. The side is
+    lost between the anchor and the realised line, and the event classifier also promotes an
+    earlier passage to a goal. This is why “faster” is not the same as “live.”</div>
+
+  <div class="grid2" style="margin-top:24px">
+    <div class="panel plain">
+      <div class="chart-title"><h3>Time to first commentary line</h3><span class="chart-note">lower is better · axis 0–18 min</span></div>
+      <div class="bars" aria-label="Time to first line">
+        <div class="bar-line"><span class="bar-label">18 s clip</span><div class="bar-track"><span class="bar-fill" style="width:3%"></span></div><span class="bar-value">0.5 min</span></div>
+        <div class="bar-line"><span class="bar-label">5 min chunk</span><div class="bar-track"><span class="bar-fill tpl" style="width:27%"></span></div><span class="bar-value">4.8 min</span></div>
+        <div class="bar-line"><span class="bar-label">Full match</span><div class="bar-track"><span class="bar-fill sky" style="width:92%"></span></div><span class="bar-value">16.6 min</span></div>
+      </div>
+      <p class="note">The chunk is faster because it sees less. The full run waits for the whole
+        match before writing and voicing; the chunk still processes a whole 5-minute block before
+        the first line. Neither is a streaming system with bounded latency.</p>
+    </div>
+    <div class="panel plain">
+      <div class="chart-title"><h3>Wall time versus real time</h3><span class="chart-note">1.00× = real time</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mode</th><th class="num">Input</th><th class="num">Wall</th><th class="num">Ratio</th></tr></thead>
+          <tbody>
+            <tr><td>18 s clip</td><td class="num">18 s</td><td class="num">39.8 s</td><td class="num">2.21×</td></tr>
+            <tr><td>5-min chunk</td><td class="num">300 s</td><td class="num">311.8 s</td><td class="num">1.04×</td></tr>
+            <tr><td>Full match</td><td class="num">3,871 s</td><td class="num">1,165 s</td><td class="num">0.30×</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="verdict" style="margin-top:16px"><p><strong>Verdict.</strong> The full-match run is
+        faster than real time in aggregate but not live: 16.6 minutes of latency before the first
+        line. The causal chunk is nearly real time but factually wrong. A live mode needs streaming
+        perception, incremental TTS and explicit side propagation, not just shorter inputs.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="events">
+  <div class="section-head">
+    <div>
+      <div class="section-tag">Comparison 3</div>
+      <h2>Event spotting</h2>
+      <p class="lead">Goals are the strong case: the score bug gives a precise anchor and both
+        goals are found. Shots and tackles are the weak case: the window classifier finds only two
+        of six shots and none of the two tackles within a minute.</p>
+    </div>
+  </div>
+
+  <div class="timeline-wrap" aria-label="Reference events versus detected events timeline">
+    <svg id="event-timeline" class="timeline" viewBox="0 0 920 300" role="img"
+         aria-label="Timeline from minute 35 to 100. Reference events on top, detected events below. Goals at 80 and 81 are matched; most shots and both tackles are missed."></svg>
+  </div>
+  <p class="note"><strong>Top:</strong> the ten curated reference moments. <strong>Bottom:</strong>
+    the 38 event lines from the full-match run. Faint ticks are passes and dead time; the stronger
+    ticks are goals, shots, corners and tackles. Solid connectors mark the four matches within
+    ±1 min; coral X marks a missed reference event.</p>
+
+  <div class="grid2" style="margin-top:24px">
+    <div class="panel plain">
+      <div class="chart-title"><h3>Recall at ±1 min</h3><span class="chart-note">n=10 reference moments</span></div>
+      <div class="bars" aria-label="Event recall by kind">
+        <div class="bar-line"><span class="bar-label">Goals</span><div class="bar-track"><span class="bar-fill" style="width:100%"></span></div><span class="bar-value">1.00</span></div>
+        <div class="bar-line"><span class="bar-label">Shots</span><div class="bar-track"><span class="bar-fill sky" style="width:33%"></span></div><span class="bar-value">0.33</span></div>
+        <div class="bar-line"><span class="bar-label">Tackles</span><div class="bar-track"><span class="bar-fill tpl" style="width:0%"></span></div><span class="bar-value">0.00</span></div>
+        <div class="bar-line"><span class="bar-label">Overall</span><div class="bar-track"><span class="bar-fill" style="width:40%"></span></div><span class="bar-value">0.40</span></div>
+      </div>
+      <div class="legend"><span><i style="background:var(--lime)"></i>matched</span><span><i style="background:var(--sky)"></i>shot</span><span><i style="background:var(--coral)"></i>tackle</span></div>
+      <p class="note">Goal precision and recall against the known 80' and 81' goals are both
+        <strong>1.00</strong>. Timing MAE for matched events is 36.2 s; goals are 13–22 s early,
+        shots 51–59 s late.</p>
+    </div>
+    <div class="panel plain">
+      <div class="chart-title"><h3>What the pipeline called</h3><span class="chart-note">38 event lines</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th class="num">Count</th></tr></thead>
+          <tbody>
+            <tr><td>pass</td><td class="num">19</td></tr>
+            <tr><td>dead time</td><td class="num">7</td></tr>
+            <tr><td>shot</td><td class="num">5</td></tr>
+            <tr><td>corner</td><td class="num">5</td></tr>
+            <tr><td>goal</td><td class="num">2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">The pipeline over-produces pass and dead-time lines and under-produces
+        the reference shot/tackle classes. This is an event-classification problem, not a
+        language problem.</p>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:24px">
+    <figure class="figure">
+      <img src="goal_clip_contact.jpg" alt="Six frames from the 81st-minute France goal clip; the broadcast score bug changes from Argentina 2–1 France to Argentina 2–2 France.">
+      <figcaption>The 81' France goal clip used for the score-bug test. The broadcast score flips
+        from 2–1 to 2–2; the reader now infers the starting score and anchors the away goal at 5 s.
+        Contact sheet: match frames at 0, 3, 6, 9, 12 and 15 s.</figcaption>
+    </figure>
+    <div class="panel plain">
+      <div class="chart-title"><h3>Reference vs detected</h3><span class="chart-note">±1 min tolerance</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Min</th><th>Reference</th><th>Detected</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td class="num">38</td><td>shot</td><td>38.85 shot</td><td>matched +50.8 s</td></tr>
+            <tr><td class="num">40</td><td>tackle</td><td>—</td><td>missed</td></tr>
+            <tr><td class="num">49</td><td>shot</td><td>49.98 shot</td><td>matched +58.8 s</td></tr>
+            <tr><td class="num">54</td><td>tackle</td><td>—</td><td>missed</td></tr>
+            <tr><td class="num">65</td><td>shot</td><td>65.56 corner</td><td>missed</td></tr>
+            <tr><td class="num">76</td><td>shot</td><td>—</td><td>missed</td></tr>
+            <tr><td class="num">80</td><td>goal</td><td>79.63 goal</td><td>matched −22.2 s</td></tr>
+            <tr><td class="num">81</td><td>goal</td><td>80.78 goal</td><td>matched −13.2 s</td></tr>
+            <tr><td class="num">85</td><td>shot</td><td>—</td><td>missed</td></tr>
+            <tr><td class="num">99</td><td>shot</td><td>—</td><td>missed</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Reference moments are curated, not exhaustive, so this is a recall/consistency
+        check; precision for shots/tackles/corners is not measured here.</p>
+    </div>
+  </div>
+
+  <div class="panel plain" style="margin-top:24px">
+    <div class="chart-title"><h3>Object detection is not event spotting</h3><span class="chart-note">separate metric</span></div>
+    <div class="grid2">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Model</th><th class="num">Params</th><th class="num">Epochs</th><th class="num">mAP50</th><th class="num">mAP50–95</th></tr></thead>
+          <tbody>
+            <tr><td>YOLO26n</td><td class="num">2.39 M</td><td class="num">50</td><td class="num">0.805</td><td class="num">0.481</td></tr>
+            <tr><td>YOLOv5lu</td><td class="num">53 M</td><td class="num">33</td><td class="num">0.795</td><td class="num">0.459</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div class="bars" aria-label="YOLO mAP comparison">
+          <div class="bar-line"><span class="bar-label">YOLO26n</span><div class="bar-track"><span class="bar-fill" style="width:80.5%"></span></div><span class="bar-value">0.805</span></div>
+          <div class="bar-line"><span class="bar-label">YOLOv5lu</span><div class="bar-track"><span class="bar-fill sky" style="width:79.5%"></span></div><span class="bar-value">0.795</span></div>
+        </div>
+        <p class="note">YOLO26n is fractionally ahead, but the runs are not equal-budget: 50 vs
+          33 epochs, 2.39 M vs 53 M parameters. Per-class YOLO26n mAP50–95: Player 0.621, Ball 0.291,
+          Referee 0.530. The low Ball score is why the ball path is interpolated rather than trusted.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <p><strong>Verdict.</strong> The score-bug goal path is reliable enough to build on. The general
+      event classifier is not: it finds one third of reference shots, no tackles, and produces
+      almost twice as many pass/dead-time lines as event lines. Report goals and object detection
+      separately; do not turn detection mAP into an event-spotting claim.</p>
+  </div>
+</section>
+
+<section class="section" id="cost">
+  <div class="section-head">
+    <div>
+      <div class="section-tag">Comparison 4</div>
+      <h2>Cost</h2>
+      <p class="lead">On this laptop, a 64.5-minute match costs about one cent of electricity;
+        on a cloud A10G it is under forty cents. Human commentary, even at a modest illustrative
+        rate, is hundreds of times more expensive. The barrier is quality and latency, not compute.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel plain">
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th>Item</th><th class="num">Local RTX 2050</th><th class="num">Cloud g5.2xlarge</th><th class="num">Human team</th></tr></thead>
+          <tbody>
+            <tr><td>Inference per match</td><td class="num">$0.010</td><td class="num">$0.392</td><td class="num">$300 live / $400 pre-recorded</td></tr>
+            <tr><td>Training (both models)</td><td class="num">$0.109</td><td class="num">$4.40</td><td class="num">—</td></tr>
+            <tr><td>Training time</td><td class="num">3.64 h</td><td class="num">3.64 h</td><td class="num">—</td></tr>
+            <tr><td>TTS</td><td class="num">43 calls</td><td class="num">43 calls</td><td class="num">—</td></tr>
+            <tr><td>Speech</td><td class="num">412.2 s</td><td class="num">412.2 s</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout"><b>400–1,500×</b><span>cheaper than the illustrative human team on cloud
+        compute, depending on whether the human rate is $25 or $100 per hour.</span></div>
+      <p class="note">Assumptions: cloud $1.21/h; local 100 W at $0.30/kWh; two-person human team
+        at $50/h for 3 h live / 4 h pre-recorded. Human rates are illustrative, not a quote.
+        Fish Audio is on the free tier; paid TTS, storage and egress are excluded.</p>
+    </div>
+    <div class="panel plain">
+      <div class="chart-title"><h3>Cost per match minute</h3><span class="chart-note">log scale · lower is better</span></div>
+      <div class="log-chart" role="img" aria-label="Log-scale cost per match minute: local 0.0002 dollars, cloud 0.006 dollars, human 4.65 dollars.">
+        <div class="log-line">
+          <span class="log-tick" style="left:0%"></span><span class="log-lab" style="left:0%">$0.0001</span>
+          <span class="log-tick" style="left:20%"></span><span class="log-lab" style="left:20%">$0.001</span>
+          <span class="log-tick" style="left:40%"></span><span class="log-lab" style="left:40%">$0.01</span>
+          <span class="log-tick" style="left:60%"></span><span class="log-lab" style="left:60%">$0.1</span>
+          <span class="log-tick" style="left:80%"></span><span class="log-lab" style="left:80%">$1</span>
+          <span class="log-tick" style="left:100%"></span><span class="log-lab" style="left:100%">$10</span>
+          <span class="log-dot" style="left:6%;background:var(--lime)"></span>
+          <span class="log-dot-label" style="left:14%">local $0.0002</span>
+          <span class="log-dot" style="left:36%;background:var(--sky)"></span>
+          <span class="log-dot-label" style="left:38%">cloud $0.006</span>
+          <span class="log-dot" style="left:93%;background:var(--coral)"></span>
+          <span class="log-dot-label" style="left:84%">human $4.65</span>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--lime)"></i>local</span><span><i style="background:var(--sky)"></i>cloud</span><span><i style="background:var(--coral)"></i>human</span></div>
+      <p class="note">A log scale is necessary here: local is 23,000× cheaper than the human
+        scenario per minute. The numbers are the measured/assumed values from the table.</p>
+      <div class="verdict" style="margin-top:16px"><p><strong>Verdict.</strong> At current quality,
+        the system is economically credible as a pre-recorded or offline tool. A live product
+        would add streaming infrastructure and still need the quality fixes; those costs are not
+        in this table.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="discussion">
+  <div class="section-head">
+    <div>
+      <div class="section-tag">Discussion</div>
+      <h2>What the numbers support</h2>
+      <p class="lead">The honest claim is narrower than “AI commentary.” It is a cheap, auditable
+        pre-recorded pipeline whose goals are reliable and whose general event layer is not yet
+        good enough for broadcast output.</p>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="panel plain">
+      <div class="kicker" style="color:var(--lime)">HOLDS</div>
+      <div class="small-list">
+        <div><span class="k">Goals</span><span class="v">2/2, precision and recall 1.00 via the score bug.</span></div>
+        <div><span class="k">Cost</span><span class="v">$0.39 cloud, $0.01 local per match.</span></div>
+        <div><span class="k">Auditability</span><span class="v">Facts, validator and ClearML runs are inspectable.</span></div>
+        <div><span class="k">End-to-end</span><span class="v">64.5 min in, 64.5 min voiced out, 43/43 lines.</span></div>
+      </div>
+    </div>
+    <div class="panel plain">
+      <div class="kicker" style="color:var(--coral)">DOES NOT HOLD</div>
+      <div class="small-list">
+        <div><span class="k">Live</span><span class="v">16.6 min to first line; chunking is faster but wrong.</span></div>
+        <div><span class="k">Events</span><span class="v">0.40 overall recall; no tackles; two of six shots.</span></div>
+        <div><span class="k">Teams</span><span class="v">Wrong side survives both AI and template paths.</span></div>
+        <div><span class="k">Language</span><span class="v">Invented detail, repetition and malformed names.</span></div>
+      </div>
+    </div>
+    <div class="panel plain">
+      <div class="kicker" style="color:var(--sky)">WHY</div>
+      <div class="small-list">
+        <div><span class="k">Score bug</span><span class="v">High precision, but the side must be carried into the line.</span></div>
+        <div><span class="k">Classifier</span><span class="v">ResNet windows over-produce pass/dead time; rare events are missed.</span></div>
+        <div><span class="k">Chunking</span><span class="v">Short context loses the match story and makes false goals easier.</span></div>
+        <div><span class="k">Validator</span><span class="v">Checks words, not truth; it accepts 95% of lines.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <p><strong>Paper claim.</strong> The pipeline is a working, low-cost, auditable pre-recorded
+      commentary system. Its strongest contribution is the separation of deterministic facts from
+      language and the score-bug goal path; its weakest links are general event spotting, team-side
+      propagation and live latency. The paper should report those weaknesses as findings, not hide
+      them.</p>
+  </div>
+
+  <h3 style="margin-top:28px">Reproduce</h3>
+  <pre>python scripts/compare_commentary.py --n 40 --device cuda
+python scripts/evaluate_event_spotting.py
+python scripts/compile_experiments.py</pre>
+  <div class="small-list">
+    <div><span class="k">AI vs human data</span><span class="v"><code>output/comparison/commentary_comparison.json</code> · <code>docs/figures/commentary_metrics.png</code></span></div>
+    <div><span class="k">Event data</span><span class="v"><code>output/experiments/event_spotting.json</code> · <code>output/experiments/full_match_job.json</code></span></div>
+    <div><span class="k">Cost data</span><span class="v"><code>output/experiments/experiment_results.json</code> · <code>docs/experiments_results.md</code></span></div>
+    <div><span class="k">Full-match output</span><span class="v"><code>output/1793056646_3 - 3 ARG vs FRA - Second-Half - Bein_0s/final_commentary.mp4</code></span></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  Matchcall · football-commentator · experiment report generated 27 October 2026.
+  The human cost figures are illustrative assumptions, not vendor quotes. Reference moments are
+  curated, not exhaustive; object-detection mAP is not event-spotting accuracy.
+</footer>
+
+</div>
+
+<script>
+(function(){
+  const svg = document.getElementById('event-timeline');
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const MIN0 = 35, MIN1 = 100;
+  const X0 = 64, X1 = 884;
+  const REF_Y = 78, DET_Y = 238, AXIS_Y = 158;
+  const C = {
+    goal:'#C9FF4F', shot:'#4FE0D0', tackle:'#F2C14E', corner:'#B48CFF',
+    pass:'#4A6B59', dead_time:'#365043', miss:'#FF6B3D',
+    lime:'#C9FF4F', sky:'#4FE0D0', coral:'#FF6B3D',
+    ink:'#EAF7EE', muted:'#8FA99B', line:'#1C3A2C', line2:'#2A4C3A'
+  };
+  const ref = [
+    {m:38,k:'shot'},{m:40,k:'tackle'},{m:49,k:'shot'},{m:54,k:'tackle'},
+    {m:65,k:'shot'},{m:76,k:'shot'},{m:80,k:'goal'},{m:81,k:'goal'},
+    {m:85,k:'shot'},{m:99,k:'shot'}
+  ];
+  const det = [
+    {m:35.33,k:'pass'},{m:35.40,k:'dead_time'},{m:35.48,k:'pass'},{m:35.91,k:'dead_time'},
+    {m:36.01,k:'pass'},{m:38.85,k:'shot'},{m:38.91,k:'pass'},{m:40.55,k:'dead_time'},
+    {m:40.61,k:'pass'},{m:41.55,k:'dead_time'},{m:41.61,k:'pass'},{m:43.66,k:'dead_time'},
+    {m:43.73,k:'pass'},{m:45.53,k:'dead_time'},{m:45.68,k:'pass'},{m:49.98,k:'shot'},
+    {m:50.05,k:'pass'},{m:58.01,k:'corner'},{m:58.08,k:'pass'},{m:65.56,k:'corner'},
+    {m:65.63,k:'pass'},{m:74.05,k:'corner'},{m:74.11,k:'pass'},{m:77.28,k:'corner'},
+    {m:77.35,k:'pass'},{m:78.60,k:'dead_time'},{m:78.68,k:'pass'},{m:79.63,k:'goal'},
+    {m:79.70,k:'shot'},{m:79.96,k:'pass'},{m:80.78,k:'goal'},{m:80.85,k:'pass'},
+    {m:80.93,k:'shot'},{m:81.01,k:'pass'},{m:82.40,k:'shot'},{m:82.46,k:'pass'},
+    {m:94.08,k:'corner'},{m:94.15,k:'pass'}
+  ];
+  const matched = [
+    {r:38, k:'shot', d:38.85}, {r:49, k:'shot', d:49.98},
+    {r:80, k:'goal', d:79.63}, {r:81, k:'goal', d:80.78}
+  ];
+  const x = m => X0 + (m - MIN0) / (MIN1 - MIN0) * (X1 - X0);
+  function el(tag, attrs, parent){
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function txt(xx, yy, s, attrs){
+    const t = el('text', Object.assign({
+      x: xx, y: yy, fill: C.muted, 'font-family':'IBM Plex Mono, monospace',
+      'font-size':'10.5', 'text-anchor':'middle'
+    }, attrs || {}), svg);
+    t.textContent = s;
+    return t;
+  }
+  // grid + minute labels
+  for (let m = 35; m <= 100; m += 5){
+    const xx = x(m);
+    el('line', {x1:xx, y1:54, x2:xx, y2:266,
+      stroke: m % 10 === 0 ? C.line2 : C.line, 'stroke-width': m % 10 === 0 ? 1 : .6,
+      'stroke-dasharray': m % 10 === 0 ? '' : '2 4'}, svg);
+    txt(xx, 286, m + '′');
+  }
+  // row labels
+  txt(X0, 28, 'REFERENCE', {'text-anchor':'start', fill:C.sky, 'font-size':'11', 'font-weight':'600', 'letter-spacing':'1.2'});
+  txt(X0, 206, 'DETECTED', {'text-anchor':'start', fill:C.lime, 'font-size':'11', 'font-weight':'600', 'letter-spacing':'1.2'});
+  // axis
+  el('line', {x1:X0, y1:AXIS_Y, x2:X1, y2:AXIS_Y, stroke:C.line2, 'stroke-width':1}, svg);
+  // reference markers
+  const refMap = new Map(ref.map(r => [r.m, r]));
+  for (const r of ref){
+    const xx = x(r.m);
+    const isMatch = matched.some(m => m.r === r.m);
+    el('circle', {cx:xx, cy:REF_Y, r:7, fill:C[r.k] || C.muted,
+      stroke:isMatch ? C.lime : C.miss, 'stroke-width':isMatch ? 2 : 1.5}, svg)
+      .appendChild(el('title', {}, svg)).textContent = r.m + '′ reference: ' + r.k;
+    if (!isMatch){
+      el('path', {d:`M${xx-4} ${REF_Y-4} L${xx+4} ${REF_Y+4} M${xx+4} ${REF_Y-4} L${xx-4} ${REF_Y+4}`,
+        stroke:C.miss, 'stroke-width':2, 'stroke-linecap':'round'}, svg);
+    }
+  }
+  // goal labels
+  txt(x(80.5), 52, 'goals 80′/81′', {fill:C.lime, 'font-size':'10.5', 'font-weight':'600'});
+  // matched connectors
+  for (const m of matched){
+    el('line', {x1:x(m.r), y1:REF_Y+8, x2:x(m.d), y2:DET_Y-10,
+      stroke:C.lime, 'stroke-width':1, 'stroke-dasharray':'4 4', opacity:.8}, svg);
+  }
+  // detected ticks
+  for (const d of det){
+    const xx = x(d.m);
+    const strong = ['goal','shot','corner','tackle'].includes(d.k);
+    const yy = strong ? 224 : 230;
+    el('line', {x1:xx, y1:yy, x2:xx, y2:DET_Y+8,
+      stroke:C[d.k] || C.muted, 'stroke-width':strong ? 3 : 1.3,
+      opacity:strong ? .95 : .38}, svg)
+      .appendChild(el('title', {}, svg)).textContent = d.m.toFixed(1) + '′ detected: ' + d.k;
+    if (matched.some(m => Math.abs(m.d - d.m) < .01)){
+      el('circle', {cx:xx, cy:DET_Y+8, r:5, fill:'none', stroke:C.lime, 'stroke-width':1.5}, svg);
+    }
+  }
+})();
+</script>
+</body>
+</html>
