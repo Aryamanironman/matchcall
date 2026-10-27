@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Matchcall Paper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#eceee9; --paper:#ffffff; --ink:#111111; --ink2:#333333;
+  --muted:#666b66; --rule:#d7dcd4; --rule2:#b9c2b7;
+  --accent:#1f5c3a; --accent2:#0b6b73; --warn:#a33a1f;
+  --hl:#fff1b8; --hlbad:#ffdcd3; --hlgood:#dff2e2;
+  --serif:"Source Serif 4","Times New Roman",serif;
+  --sans:"Source Sans 3","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.62 var(--serif);-webkit-font-smoothing:antialiased}
+.paper{max-width:900px;margin:32px auto;background:var(--paper);
+  padding:56px 64px 64px;border:1px solid var(--rule);
+  box-shadow:0 18px 50px rgba(0,0,0,.08)}
+h1,h2,h3,p,figure,table,ol,ul{margin:0}
+a{color:var(--accent);text-underline-offset:2px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.title{font-size:clamp(2rem,4.6vw,2.9rem);line-height:1.08;
+  font-weight:700;text-align:center;letter-spacing:-.015em;text-wrap:balance}
+.authors{text-align:center;margin-top:18px;font-size:1.02rem}
+.authors b{font-weight:600}
+.affil{text-align:center;color:var(--muted);font-family:var(--sans);
+  font-size:12.5px;margin-top:6px;line-height:1.5}
+.abstract{margin:28px 0 18px;padding:18px 22px;background:#f8faf7;
+  border-top:1px solid var(--rule2);border-bottom:1px solid var(--rule2);
+  font-size:14.3px;line-height:1.56;text-align:justify}
+.abstract .lab{font-family:var(--sans);font-weight:700;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+  display:block;margin-bottom:6px}
+.keywords{font-family:var(--sans);font-size:12.5px;color:var(--ink2);
+  margin-bottom:8px}
+.keywords b{font-weight:700}
+.section{margin-top:34px}
+h2{font-size:1.35rem;font-weight:700;line-height:1.2;
+  padding-bottom:5px;border-bottom:1px solid var(--rule);margin-bottom:12px;
+  text-wrap:balance}
+h3{font-size:1.05rem;font-weight:700;margin:20px 0 8px;line-height:1.3}
+p{margin-bottom:11px;text-align:justify;hyphens:auto}
+.lead{font-size:15.5px;color:var(--ink2)}
+.small{font-family:var(--sans);font-size:12.5px;color:var(--muted)}
+.figure{margin:20px 0 22px;break-inside:avoid}
+.figure img{display:block;width:100%;height:auto;border:1px solid var(--rule)}
+figcaption{font-family:var(--sans);font-size:12px;line-height:1.5;
+  color:var(--muted);margin-top:8px;text-align:left}
+figcaption b{color:var(--ink);font-weight:700}
+.tbl-wrap{overflow-x:auto;margin:16px 0 20px}
+.tbl{width:100%;border-collapse:collapse;font-family:var(--sans);
+  font-size:12.3px;line-height:1.45}
+.tbl th{text-align:left;font-weight:700;border-top:2px solid var(--ink);
+  border-bottom:1px solid var(--ink);padding:7px 8px;vertical-align:bottom}
+.tbl td{border-bottom:1px solid var(--rule);padding:7px 8px;vertical-align:top}
+.tbl tr:last-child td{border-bottom:2px solid var(--ink)}
+.tbl .num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.tbl .group td{background:#f5f7f3;font-weight:700;border-top:1px solid var(--rule2);
+  border-bottom:1px solid var(--rule2)}
+.tbl-caption{font-family:var(--sans);font-size:12px;color:var(--muted);
+  margin-bottom:6px;text-align:left}
+.tbl-caption b{color:var(--ink)}
+mark{background:var(--hl);color:inherit;padding:0 2px;border-radius:2px}
+mark.err{background:var(--hlbad)}
+mark.ok{background:var(--hlgood)}
+.pipeline{display:flex;gap:6px;align-items:stretch;margin:10px 0 4px}
+.stage{flex:1;border:1px solid var(--rule2);background:#f8faf7;padding:10px 9px}
+.stage b{display:block;font-family:var(--sans);font-size:12px;line-height:1.3}
+.stage span{display:block;font-family:var(--sans);font-size:10.5px;
+  color:var(--muted);margin-top:3px;line-height:1.35}
+.arrow{display:flex;align-items:center;color:var(--muted);font-size:16px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.chart-panel{border:1px solid var(--rule);background:#fbfcfb;padding:9px 10px 4px}
+.chart-title{font-family:var(--sans);font-size:11.5px;color:var(--ink2);
+  margin-bottom:2px}
+.chart-svg{display:block;width:100%;height:auto}
+.timeline-wrap{border:1px solid var(--rule);background:#fbfcfb;padding:6px;
+  overflow-x:auto}
+.timeline{display:block;min-width:700px;width:100%;height:auto}
+.bars{display:grid;gap:7px;margin-top:8px}
+.bar-row{display:grid;grid-template-columns:96px minmax(0,1fr) 54px;
+  gap:8px;align-items:center;font-family:var(--sans);font-size:11.5px}
+.bar-track{height:7px;background:#eef1ec;border:1px solid var(--rule);
+  overflow:hidden}
+.bar-fill{display:block;height:100%;background:var(--accent)}
+.bar-fill.alt{background:var(--accent2)}
+.bar-fill.bad{background:var(--warn)}
+.bar-val{font-family:var(--mono);font-size:10.5px;text-align:right;
+  color:var(--ink2);font-variant-numeric:tabular-nums}
+.log-chart{position:relative;border:1px solid var(--rule);background:#fbfcfb;
+  padding:34px 14px 30px;margin-top:8px}
+.log-line{position:relative;height:1px;background:var(--rule2);margin:0 6px;
+  min-width:380px}
+.log-tick{position:absolute;top:-4px;width:1px;height:9px;background:var(--rule2)}
+.log-lab{position:absolute;top:14px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:9.5px;color:var(--muted);white-space:nowrap}
+.log-dot{position:absolute;top:-6px;width:10px;height:10px;border-radius:50%;
+  transform:translateX(-50%);border:2px solid var(--paper)}
+.log-dot-label{position:absolute;top:-26px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:10px;color:var(--ink2);white-space:nowrap}
+.legend{font-family:var(--sans);font-size:11px;color:var(--muted);
+  margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
+.legend i{display:inline-block;width:8px;height:8px;margin-right:4px}
+.verdict{border-left:3px solid var(--accent);padding:2px 0 2px 13px;
+  margin:14px 0 16px;color:var(--ink2);font-size:14.2px}
+.verdict strong{color:var(--ink)}
+.references{font-size:11.6px;line-height:1.45;padding-left:0;list-style:none;
+  counter-reset:ref}
+.references li{counter-increment:ref;margin-bottom:6px;padding-left:30px;
+  position:relative;text-align:left}
+.references li::before{content:"[" counter(ref) "]";position:absolute;left:0;
+  color:var(--muted);font-family:var(--mono);font-size:10.5px}
+code,pre{font-family:var(--mono)}
+pre{font-size:10.8px;line-height:1.55;background:#f8faf7;border:1px solid var(--rule);
+  padding:12px;overflow-x:auto;margin:10px 0}
+@media(max-width:760px){
+  .paper{margin:0;padding:28px 20px 40px;border:0;box-shadow:none}
+  .chart-grid{grid-template-columns:1fr}
+  .pipeline{flex-direction:column}
+  .arrow{justify-content:center;transform:rotate(90deg);height:14px}
+  .bar-row{grid-template-columns:80px minmax(0,1fr) 48px}
+  .tbl{font-size:11.5px}
+}
+@media print{
+  body{background:#fff}
+  .paper{max-width:none;margin:0;padding:0;border:0;box-shadow:none}
+  .section{margin-top:22px}
+  .figure,.chart-panel{break-inside:avoid}
+  .tbl-wrap{overflow:visible;break-inside:avoid}
+  #table5{break-before:page}
+  .tbl tr{break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .timeline-wrap{overflow:visible}
+  .timeline{min-width:0}
+  .log-line{min-width:0}
+  a{color:inherit;text-decoration:none}
+  mark{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@page{margin:16mm}
+</style>
+</head>
+<body>
+<div class="paper">
+
+<h1 class="title">Matchcall: A Fact-Grounded, Low-Cost Pipeline for Spoken Football Commentary</h1>
+<div class="authors"><b>Aryaman</b><br>Supervisor: Nabin Sir</div>
+<div class="affil">Department of Computer Science, [University] · 27 October 2026</div>
+
+<div class="abstract">
+<span class="lab">Abstract</span>
+Automatic football commentary must detect events, identify players and teams, decide what is worth saying, generate grounded language, and voice it in time. Recent systems apply large multimodal models, but they are expensive, difficult to reproduce on consumer hardware, and can hallucinate facts. We present Matchcall, a modular pipeline that keeps deterministic facts separate from surface realisation. A score-bug reader supplies goal anchors; a motion-gated window scan and a ResNet-18 classifier propose other events; YOLO26n with ByteTrack, jersey clustering and possession estimation supply player-level facts; GPT-2 with LoRA generates commentary under a grounding validator with a template fallback; Fish Audio synthesises speech. On a 64.5-minute ARG–FRA broadcast, the pipeline produces 43 fully voiced lines in 19.4 minutes on a 4 GB RTX 2050. Both goals are recovered with precision and recall 1.00, but overall event recall against ten curated moments is 0.40 at ±1 minute. On 40 held-out human references, GPT-2 v4 improves ROUGE-L from 0.093 to 0.185 and METEOR from 0.027 to 0.207 over templates, while BLEU-4 remains near zero. A 5-minute causal chunk is faster to first line (4.8 vs 16.6 minutes) but misattributes both goals to the home side, so the current system is pre-recorded only. Cloud inference costs $0.39 per match versus an illustrative $300 human team. We conclude that low-cost, auditable pre-recorded commentary is feasible; live commentary and general event spotting remain open.
+</div>
+<div class="keywords"><b>Keywords:</b> football commentary, action spotting, multi-object tracking, LoRA, grounding, text-to-speech, reproducibility</div>
+
+<section class="section">
+<h2>1. Introduction</h2>
+<p class="lead">A football broadcast is expensive to describe. A live commentator, a producer and often a second analyst must watch every match, identify the important moments, remember the score and the narrative, and speak continuously. Most matches are never covered at all; the ones that are covered are described in one language for one audience. Automatic commentary could widen that coverage and lower its cost, but only if it is accurate enough to trust and cheap enough to run.</p>
+<p>Three families of systems have been proposed. Rule-based and template systems such as MIKE separate fact selection from surface realisation and remain interpretable, but their language is repetitive [11]. Neural captioning systems, including SoccerNet-Caption and MatchTime, learn from broadcast commentary and produce more varied text, but depend on large aligned corpora and report overlap or alignment metrics rather than factuality [12], [13]. More recent multimodal LLMs such as TimeSoccer and SoccerComment consume full matches or retrieve external knowledge, but they are heavy and do not expose an auditable fact layer [14], [15], [30]. Each family trades one desirable property for another.</p>
+<p>This paper asks whether a deliberately small, modular system can occupy a different point in that trade-off. The system, Matchcall, keeps five stages separate: event spotting, tracking and team/possession facts, deterministic description, language generation, and speech. The language model never decides the score, minute, team or possession; it only realises facts that were already measured. A validator checks every candidate line against those facts, and a grounded template is used when the candidate fails. The design target is a full match on a single consumer GPU, with every training run and artifact logged.</p>
+<p>We report four comparisons on a real broadcast: (i) GPT-2 commentary against 40 held-out human references and a template baseline; (ii) pre-recorded full-context commentary against a 5-minute causal chunk; (iii) event spotting against ten curated reference moments; and (iv) compute, TTS and human cost. The results are deliberately mixed. Goals are reliable because the broadcast score bug is a high-precision anchor. General event spotting and live latency are not solved. The contribution is not a new state of the art on SoccerNet; it is an auditable, reproducible instantiation of the full broadcast-to-speech pipeline, with its failure modes measured rather than hidden.</p>
+<p><b>Contributions.</b> (1) A modular five-stage pipeline that separates deterministic facts from language and speech. (2) A score-bug goal anchor that infers the on-screen starting score and survives short clips. (3) A full 64.5-minute end-to-end run with 43 voiced lines on a 4 GB GPU. (4) Four empirical comparisons, including negative results for live operation and general event spotting. (5) ClearML-logged training runs and a reproducible evaluation script.</p>
+</section>
+
+<section class="section">
+<h2>2. Related Work</h2>
+<h3>2.1 Action spotting and event understanding</h3>
+<p>SoccerNet defined action spotting as predicting the temporal location and class of sparse events in long broadcasts, with Average-mAP at multiple tolerances [1]. SoccerNet-v2 expanded the taxonomy to seventeen classes and added camera-shot and replay annotations [2]. CALF models the temporal context around sparse anchors [3], NetVLAD++ pools past and future context separately [38], and E2E-Spot trains a compact end-to-end model on short clips [4]. The challenge reports show steady progress, with tight Average-mAP reaching the low 70s in 2023 [5]; ASTRA is notable for using audio to recognise non-visual actions [31]. The common lesson is that temporal precision and a large, well-annotated corpus matter. Our system instead uses a broadcast-specific shortcut for goals — the score bug — and a lightweight window classifier for other events. The trade-off is lower coverage on rare classes, which we measure rather than assume away.</p>
+
+<h3>2.2 Detection, tracking, team identification and possession</h3>
+<p>YOLO established single-pass real-time detection [32]. ByteTrack associates low-score boxes to recover occluded objects and is the tracker used here [6]. SportsMOT and SoccerNet-Tracking expose the difficulty of sports footage: fast motion, similar appearances, occlusion and camera cuts [7], [8]. Team identity and possession are semantic quantities that track IDs alone do not provide. DeepPlayer-Track uses jersey-colour masks for team recognition [9], and Guo et al. combine YOLOv8, DBSCAN jersey clustering and Norfair tracking for possession estimation on full matches [10]. Standard tracking metrics include HOTA, MOTA and IDF1 [26], [35], [36]. Our pipeline follows the label-free jersey-clustering approach and adds a bounded ball-interpolation rule; the ball remains a weak point because its object-detection AP is low.</p>
+
+<h3>2.3 From templates to neural and LLM commentary</h3>
+<p>MIKE used six analysers, importance-scored proposition selection and template generation [11]. SoccerNet-Caption introduced dense captioning with almost 37,000 timestamped commentaries across 715.9 hours [12]. MatchTime showed that alignment quality is a first-order determinant of generation quality and released an aligned dataset and the MatchVoice model [13]. TimeSoccer consumes full 45-minute matches with frame compression [14], while SoccerComment combines LanguageBind, Vicuna-7B and retrieval [15]. Ravuru documents the hardware limits of commentary training and the effect of window size [30], and MatchVision/SoccerReplay-1988 provides a large multi-modal corpus [34]. These systems are more fluent than templates but heavier; our work tests a small GPT-2 with LoRA [16], [17] under a deterministic validator.</p>
+
+<h3>2.4 Grounding, hallucination and evaluation</h3>
+<p>Hallucination in natural-language generation is surveyed by Ji et al. [19]. FActScore decomposes long-form text into atomic facts and checks each against a knowledge source [18]; retrieval-augmented generation supplies evidence at generation time [20]. Football commentary has no dedicated faithfulness benchmark. SoccerNet-Caption, MatchTime, TimeSoccer and SoccerComment report captioning overlap or alignment; BLEU, ROUGE and METEOR measure similarity to references, not truth [27]–[29]. Our validator is closer to atomic checking than to retrieval-only grounding: it checks the generated line against the measured score, minute, team and event before acceptance.</p>
+
+<h3>2.5 Speech synthesis and prosody</h3>
+<p>Tacotron 2 established neural TTS naturalness [21]; FastSpeech 2 added explicit duration, pitch and energy control [22]; VITS combined a conditional VAE, flows and adversarial training [23]; StyleTTS 2 added style diffusion [24]. Fish Audio's S1 family offers emotion and tone markers and reports low real-time factors on high-end GPUs [25]. Sports-commentary prosody is not covered by these benchmarks. We use a production TTS and map event intensity to pacing, but we do not claim a sports-specific TTS evaluation.</p>
+
+<h3>2.6 Positioning</h3>
+<p>The literature is rich in perception benchmarks and increasingly rich in generative commentary, but sparse in systems that expose a deterministic fact layer, run the full broadcast-to-speech path on consumer hardware, and report their negative results. Matchcall is positioned at that intersection. It borrows the score-bug idea for goals, the jersey-clustering idea for teams, the LoRA idea for small-GPU language, and the FActScore idea for validation; it combines them into one auditable pipeline and measures where the combination fails.</p>
+</section>
+
+<section class="section">
+<h2>3. System</h2>
+<h3>3.1 Overview</h3>
+<p>Matchcall has five stages, shown in Figure 1. The first two produce observations; the third turns them into facts; the fourth turns facts into language; the fifth turns language into speech and mixes it with the match. The separation is deliberate: an error in the language model cannot change the score, and an error in perception is visible in the fact sheet before it reaches the viewer.</p>
+<figure class="figure">
+  <div class="pipeline" aria-label="Five-stage pipeline">
+    <div class="stage"><b>1 · Action spotting</b><span>score-bug anchors, motion windows, ResNet-18, crowd rise</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><b>2 · Tracking</b><span>YOLO26n, ByteTrack, jersey clustering, possession, ball interpolation</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><b>3 · Facts</b><span>score, minute, zone, possession, tracked players, event team</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><b>4 · Language</b><span>GPT-2 LoRA v4, validator, grounded fallback</span></div>
+    <div class="arrow">→</div>
+    <div class="stage"><b>5 · Speech</b><span>Fish Audio, event pacing, ffmpeg mix, ClearML logs</span></div>
+  </div>
+  <figcaption><b>Figure 1.</b> The five-stage pipeline. Stages 1–2 observe; stage 3 fixes the facts; stage 4 realises them; stage 5 voices and renders. The language model never writes the score or the event team.</figcaption>
+</figure>
+
+<h3>3.2 Event layer</h3>
+<p>The event layer combines three signals. A score-bug reader samples the two score digits in the broadcast overlay, classifies each digit by its binary shape, and detects a persistent transition to the expected next score. It infers the score already on the board from the first three samples, so a clip that starts at 2–1 is not treated as 0–0. A motion-gated window scan proposes candidate events, and a ResNet-18 classifier assigns one of five labels (goal, shot, pass, tackle, dead time); crowd-audio rise and ball speed refine the goal/shot decision. The score-bug anchor is treated as gold for goals: it is placed a few seconds before the digit flip because the broadcast updates after the ball crosses the line.</p>
+
+<h3>3.3 Tracking, teams and facts</h3>
+<p>YOLO26n detects players, the ball and the referee in each scheduled frame; ByteTrack maintains identities across frames [6], [32]. Jersey colours are clustered with KMeans into two teams, and possession is assigned to the side of the tracked player nearest the ball. Because broadcast cuts and close-ups break the ball path, raw detections are interpolated only across bounded gaps (16 frames), single-frame teleports are rejected, and predicted frames are marked. The output is a deterministic fact sheet: score, minute, ball zone, possession, tracked-player count and event team. No language model is allowed to add to this sheet.</p>
+
+<h3>3.4 Commentary and validation</h3>
+<p>GPT-2 v4 is a LoRA adapter [16] over GPT-2 [17], trained on team-grounded SoccerReplay commentary [34]. The prompt supplies the event label, team, scoreline, minute, phase and measured vision features. Candidate lines are cleaned and checked: the event team must appear, blocked team and player names are rejected, digits must match the fact sheet, and a goal line must contain a real goal phrase in its opening sentence and no contradiction such as “denied,” “wide” or “saved.” If every candidate fails, the grounded template announcer is used [11]. The validator is intentionally conservative; it is a guard against invented facts, not a measure of fluency.</p>
+
+<h3>3.5 Speech, render and MLOps</h3>
+<p>Accepted lines are synthesised with Fish Audio s2.1-pro-free [25]. Event intensity controls pacing, the voice is mixed under the original crowd at a low level, and ffmpeg renders the full match. Every YOLO and GPT-2 run is a ClearML task with parameters, per-epoch or per-step scalars, plots, artifacts and a registered model [33]. The evaluation artifacts in this paper were produced from the same logged runs.</p>
+</section>
+
+<section class="section">
+<h2>4. Experimental Setup</h2>
+<h3>4.1 Data and tasks</h3>
+<p>All end-to-end results use a 64.5-minute, 1920×1080 recording of the Argentina–France second half. The recording contains two goals, at broadcast minutes 80 and 81; the score bug flips from 2–1 to 2–2. The event reference is the ten curated moments used by the earlier highlight reel: six shots, two tackles and two goals. This is a reference for recall/consistency, not an exhaustive independent annotation, so event precision is not measured. The commentary comparison uses 40 held-out SoccerReplay prompts with human reference lines [34]. The live experiment uses a 5-minute chunk starting at 40:00 of the recording, processed with only that chunk as context. The object detector is trained on the Roboflow V1 football dataset (8,677 train / 2,996 validation images, three classes: Player, Ball, Referee) [37].</p>
+
+<h3>4.2 Models and training</h3>
+<p>Table 1 summarises the trained components. YOLO26n was fine-tuned at 640 px for 50 epochs with batch 1 on the RTX 2050; the best checkpoint was the final epoch, with mAP50 0.806 and mAP50–95 0.480. GPT-2 v4 used LoRA rank 32, 160-token sequences, completion-only loss, three epochs and 2,481 optimizer steps; the loss fell from 3.877 to 0.779. Fish Audio was used through its free tier, so no paid TTS price is included.</p>
+<div class="tbl-wrap">
+<div class="tbl-caption"><b>Table 1.</b> Trained components and schedules. The detector and language model were trained locally on one 4 GB GPU; ClearML logged both runs.</div>
+<table class="tbl">
+<thead><tr><th>Component</th><th>Model / data</th><th class="num">Params</th><th>Schedule</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Detector</td><td>YOLO26n on V1 (8,677 / 2,996)</td><td class="num">2.39 M</td><td>640 px, 50 epochs, batch 1, 2.70 h</td><td>mAP50 0.806; mAP50–95 0.480</td></tr>
+<tr><td>Commentary</td><td>GPT-2 + LoRA r=32 on SoccerReplay-1988</td><td class="num">124 M base</td><td>3 epochs, 2,481 steps, 160 tokens</td><td>loss 3.877 → 0.779</td></tr>
+<tr><td>Speech</td><td>Fish Audio s2.1-pro-free</td><td class="num">—</td><td>43 calls, 412.2 s speech</td><td>43/43 lines voiced</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>4.3 Metrics</h3>
+<p>Commentary is scored against human references with BLEU-1/2/4, ROUGE-L and METEOR [27]–[29], and with validator acceptance and line length. Event spotting is scored as recall against the ten reference moments at ±1 minute, with goal precision/recall checked against the known 80' and 81' goals. Live operation is measured by wall time, wall-time ratio and time to first commentary line. Cost is reported for local electricity, a cloud <code>ml.g5.2xlarge</code> at $1.21/h, and an illustrative two-person human team; the human rates are assumptions, not quotes.</p>
+
+<h3>4.4 Hardware and reproducibility</h3>
+<p>Inference and training used an NVIDIA RTX 2050 with 4 GB of VRAM. The full-match run, ClearML tasks, model checkpoints, comparison JSON and evaluation scripts are retained in the project repository. The key commands are listed in Appendix A.</p>
+</section>
+
+<section class="section" id="results">
+<h2>5. Results</h2>
+<h3>5.1 AI versus human commentary</h3>
+<p>Table 2 reports the 40-prompt comparison. GPT-2 v4 more than doubles ROUGE-L over the template baseline (0.185 vs 0.093) and raises METEOR from 0.027 to 0.207, while writing lines of human length (40.5 words vs 31.9 for humans). BLEU-4 is near zero for both systems, which is expected for free-form commentary with many valid paraphrases. The validator accepts 38 of 40 lines; an independent held-out evaluation with a stricter acceptance path accepted 15 of 40, so the 95% figure should be read as a property of this prompt set, not a general truth rate.</p>
+<div class="tbl-wrap">
+<div class="tbl-caption"><b>Table 2.</b> Commentary against 40 held-out human references. The human column is the target; self-similarity is 1 and is not a system score.</div>
+<table class="tbl">
+<thead><tr><th>Metric</th><th class="num">GPT-2 v4</th><th class="num">Template</th><th class="num">Human reference</th></tr></thead>
+<tbody>
+<tr><td>BLEU-1</td><td class="num">0.0300</td><td class="num">0.0103</td><td class="num">—</td></tr>
+<tr><td>BLEU-2</td><td class="num">0.0014</td><td class="num">0.0020</td><td class="num">—</td></tr>
+<tr><td>BLEU-4</td><td class="num">0.000304</td><td class="num">0.001038</td><td class="num">—</td></tr>
+<tr><td>ROUGE-L</td><td class="num">0.1845</td><td class="num">0.0931</td><td class="num">—</td></tr>
+<tr><td>METEOR</td><td class="num">0.2066</td><td class="num">0.0269</td><td class="num">—</td></tr>
+<tr><td>Average words</td><td class="num">40.5</td><td class="num">7.4</td><td class="num">31.9</td></tr>
+<tr><td>Grounding accepted</td><td class="num">38/40</td><td class="num">—</td><td class="num">—</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="figure">
+  <div class="chart-grid">
+    <div class="chart-panel">
+      <div class="chart-title">Overlap with human reference (0–0.25)</div>
+      <div class="bars" aria-label="ROUGE-L and METEOR">
+        <div class="bar-row"><span>ROUGE-L · v4</span><div class="bar-track"><span class="bar-fill" style="width:74%"></span></div><span class="bar-val">0.185</span></div>
+        <div class="bar-row"><span>ROUGE-L · tpl</span><div class="bar-track"><span class="bar-fill alt" style="width:37%"></span></div><span class="bar-val">0.093</span></div>
+        <div class="bar-row"><span>METEOR · v4</span><div class="bar-track"><span class="bar-fill" style="width:83%"></span></div><span class="bar-val">0.207</span></div>
+        <div class="bar-row"><span>METEOR · tpl</span><div class="bar-track"><span class="bar-fill alt" style="width:11%"></span></div><span class="bar-val">0.027</span></div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">Line length (words, axis 0–45)</div>
+      <div class="bars" aria-label="Average line length">
+        <div class="bar-row"><span>GPT-2 v4</span><div class="bar-track"><span class="bar-fill" style="width:90%"></span></div><span class="bar-val">40.5</span></div>
+        <div class="bar-row"><span>Human</span><div class="bar-track"><span class="bar-fill alt" style="width:71%"></span></div><span class="bar-val">31.9</span></div>
+        <div class="bar-row"><span>Template</span><div class="bar-track"><span class="bar-fill bad" style="width:16%"></span></div><span class="bar-val">7.4</span></div>
+      </div>
+    </div>
+  </div>
+  <figcaption><b>Figure 2.</b> GPT-2 v4 is closer to human overlap and length than the template baseline. BLEU-4 is omitted because it is near zero for both systems; the exact values are in Table 2.</figcaption>
+</figure>
+
+<p>Table 3 quotes three held-out records to show what the aggregate scores hide. In the first, GPT-2 names the correct team and produces a human-length line, but invents a shot that the reference does not contain. In the second, both GPT-2 and the template attribute the corner to Napoli while the event belongs to Eintracht Frankfurt; this is a shared feature-layer failure, not only a language failure. In the third, GPT-2 misses a goal entirely and describes a stop and a corner; the template at least calls a goal, but names the wrong team. These are not edge cases: they correspond to the three failure modes — invented detail, wrong team, missed event.</p>
+<div class="tbl-wrap">
+<div class="tbl-caption"><b>Table 3.</b> Held-out commentary records. Highlighted spans mark the difference that matters: red for wrong or unsupported content, green for a correct event call.</div>
+<table class="tbl">
+<thead><tr><th style="width:13%">Event</th><th style="width:11%">Source</th><th>Line</th><th style="width:18%">Difference</th></tr></thead>
+<tbody>
+<tr class="group"><td colspan="4">Record A · pass / West Ham · human reference and GPT-2 are both about the same passage</td></tr>
+<tr><td>pass</td><td>Human</td><td>Wonderful movement by West Ham. The players are holding possession, mostly exchanging one-touch passes. They control the pace of the game now. The midfielder attempts to feed the defender with a chip pass, but the goalkeeper reacts well and comes off his line to intercept.</td><td>Reference line</td></tr>
+<tr><td>pass</td><td>GPT-2 v4</td><td>West Ham are showcasing great team work by exchanging some short passes and one-two passing balls with one another to create new attacking opportunities. The midfielder is unlucky enough not to shoot from the edge of the box as <mark class="err">his effort flies just wide of the right post</mark>.</td><td><mark class="err">invented shot</mark>; team correct</td></tr>
+<tr><td>pass</td><td>Template</td><td>Patient stuff from West Ham, switching the play smartly.</td><td>correct but short</td></tr>
+<tr class="group"><td colspan="4">Record B · corner / Eintracht Frankfurt · both systems name the wrong team</td></tr>
+<tr><td>corner</td><td>Human</td><td>The forward strikes the ball towards goal, but it fails to reach the target after being well blocked by one of the defenders. Corner kick. Eintracht Frankfurt will have an opportunity.</td><td>Reference line</td></tr>
+<tr><td>corner</td><td>GPT-2 v4</td><td><mark class="err">Napoli</mark> failed to take advantage of the corner as their opponents were alert and averted the threat at the last moment! The ball goes out of play. Neat result from the forward's attempted effort with a cross into the box resulting in a dangerous clearance.</td><td><mark class="err">wrong team</mark>; topic correct</td></tr>
+<tr><td>corner</td><td>Template</td><td>The delivery comes in for <mark class="err">Napoli</mark>!</td><td><mark class="err">wrong team</mark></td></tr>
+<tr class="group"><td colspan="4">Record C · goal / B. Monchengladbach · GPT-2 misses the event</td></tr>
+<tr><td>goal</td><td>Human</td><td>The goal stands! That took a long time for the referee to decide. The relieved B. Monchengladbach players can finally celebrate.</td><td>Reference line</td></tr>
+<tr><td>goal</td><td>GPT-2 v4</td><td>The forward races towards goal but the defender gets back well to make a challenge. One of the defending players reacts superbly to get his teammates down and intercepts one. <mark class="err">A promising stop for Inter! Corner kick from long range.</mark></td><td><mark class="err">missed goal</mark>; wrong team</td></tr>
+<tr><td>goal</td><td>Template</td><td><mark class="ok">GOAL!</mark> <mark class="err">Inter</mark> make it count — sheer precision at a vital time!</td><td><mark class="ok">calls goal</mark>; <mark class="err">wrong team</mark></td></tr>
+</tbody>
+</table>
+</div>
+<div class="verdict"><strong>Result.</strong> GPT-2 is the better surface realiser: longer, more varied, closer to human overlap. It is not the better fact layer. The validator raises precision but accepts 95% of lines, and in one record both the model and the template inherit a wrong team from the shared feature layer.</div>
+
+<h3>5.2 Live versus pre-recorded</h3>
+<p>The full-context run is a batch job: it reads the whole match, detects events, writes lines and only then synthesises speech. The 5-minute chunk is processed with only that chunk as context and is therefore a closer analogue of a causal live system. Table 4 shows the difference. The full run calls both goals correctly and attributes them to France. The chunk calls two goals and attributes both to Argentina, while the score-bug anchors in the same run are <code>away 44:33</code> and <code>away 45:42</code>; it also produces an earlier goal at 2:01. The chunk is faster to first line (4.8 vs 16.6 minutes) but factually worse.</p>
+<div class="tbl-wrap">
+<div class="tbl-caption"><b>Table 4.</b> Full-context versus 5-minute causal chunk. Red marks the wrong side; green marks the correct side.</div>
+<table class="tbl">
+<thead><tr><th>Mode</th><th class="num">First line</th><th>Goal commentary</th><th>Outcome</th></tr></thead>
+<tbody>
+<tr><td>Pre-recorded, full context</td><td class="num">16.6 min</td><td>[44:18] GOAL! <mark class="ok">France</mark> make it count — sheer precision at a vital time!<br>[45:27] IT'S A GOAL! Clinical from <mark class="ok">France</mark> — the keeper had no chance!</td><td>2/2 goals; correct side; slower</td></tr>
+<tr><td>Live-like, 5-min chunk</td><td class="num">4.8 min</td><td>[02:01] GOAL! <mark class="err">Argentina</mark> make it count — sheer precision at a vital time!<br>[04:05] IT'S A GOAL! Clinical from <mark class="err">Argentina</mark> — the keeper had no chance!</td><td><mark class="err">wrong side</mark>; false early goal; faster</td></tr>
+</tbody>
+</table>
+</div>
+<figure class="figure">
+  <div class="chart-panel">
+    <div class="chart-title">Time to first commentary line (minutes; lower is better)</div>
+    <div class="bars" aria-label="Time to first line">
+      <div class="bar-row"><span>18 s clip</span><div class="bar-track"><span class="bar-fill" style="width:3%"></span></div><span class="bar-val">0.5</span></div>
+      <div class="bar-row"><span>5-min chunk</span><div class="bar-track"><span class="bar-fill bad" style="width:27%"></span></div><span class="bar-val">4.8</span></div>
+      <div class="bar-row"><span>Full match</span><div class="bar-track"><span class="bar-fill alt" style="width:92%"></span></div><span class="bar-val">16.6</span></div>
+    </div>
+  </div>
+  <figcaption><b>Figure 3.</b> Latency to the first commentary line. The full-match run is faster than real time in aggregate (0.30×), but the first line appears only after the whole match is scored and written. The chunk is near real time and wrong.</figcaption>
+</figure>
+<p>The chunk's failure has a concrete cause: the goal-side information exists in the anchor, but it is not carried into the realised line, and the short context makes the event classifier over-fire. A live system needs streaming perception, incremental TTS and explicit side propagation; shortening the input is not enough. This is a negative result for the current architecture, and we report it as such.</p>
+
+<h3>5.3 Event spotting</h3>
+<p>Figure 4 compares the ten reference moments with the 38 event lines from the full run. Figure 5 summarises recall. Goals are the strong case: both are found within 13–22 seconds, with precision and recall 1.00. Shots are weaker: two of six are matched, with a timing error of 51–59 seconds. Both tackles are missed. Overall recall is 0.40 at ±1 minute. The pipeline's label distribution explains part of the gap: it emits 19 pass and 7 dead-time lines, but only 5 shot, 5 corner and 2 goal lines.</p>
+<figure class="figure">
+  <div class="timeline-wrap">
+    <svg id="event-timeline" class="timeline" viewBox="0 0 920 300" role="img" aria-label="Timeline of ten reference events and 38 detected events; goals at 80 and 81 are matched, most shots and both tackles are missed."></svg>
+  </div>
+  <figcaption><b>Figure 4.</b> Reference moments (top) and detected event lines (bottom). Faint ticks are passes and dead time; strong ticks are goals, shots, corners and tackles. Dashed lines mark matches within ±1 minute; red-ringed markers mark missed reference events.</figcaption>
+</figure>
+<div class="chart-grid">
+  <figure class="figure" style="margin:0">
+    <div class="chart-panel">
+      <div class="chart-title">Recall at ±1 min</div>
+      <div class="bars" aria-label="Recall by event kind">
+        <div class="bar-row"><span>Goals</span><div class="bar-track"><span class="bar-fill" style="width:100%"></span></div><span class="bar-val">1.00</span></div>
+        <div class="bar-row"><span>Shots</span><div class="bar-track"><span class="bar-fill alt" style="width:33%"></span></div><span class="bar-val">0.33</span></div>
+        <div class="bar-row"><span>Tackles</span><div class="bar-track"><span class="bar-fill bad" style="width:0%"></span></div><span class="bar-val">0.00</span></div>
+        <div class="bar-row"><span>Overall</span><div class="bar-track"><span class="bar-fill" style="width:40%"></span></div><span class="bar-val">0.40</span></div>
+      </div>
+    </div>
+    <figcaption><b>Figure 5.</b> Event recall against the ten curated moments. Goal precision and recall are both 1.00; timing MAE for matched events is 36.2 s.</figcaption>
+  </figure>
+  <figure class="figure" style="margin:0">
+    <img src="goal_clip_contact.jpg" alt="Six frames from the 81st-minute France goal clip; the score bug changes from Argentina 2–1 France to 2–2.">
+    <figcaption><b>Figure 6.</b> The 81' goal clip. The broadcast score flips from 2–1 to 2–2; the score-bug reader infers the starting score and anchors the away goal at 5 s. Frames at 0, 3, 6, 9, 12 and 15 s.</figcaption>
+  </figure>
+</div>
+<div class="tbl-wrap" id="table5">
+<div class="tbl-caption"><b>Table 5.</b> Reference moments versus detected events at ±1 minute. A dash means no same-kind detection in the window.</div>
+<table class="tbl">
+<thead><tr><th class="num">Minute</th><th>Reference</th><th>Detected</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td class="num">38</td><td>shot</td><td>38.85 shot</td><td>matched (+50.8 s)</td></tr>
+<tr><td class="num">40</td><td>tackle</td><td>—</td><td>missed</td></tr>
+<tr><td class="num">49</td><td>shot</td><td>49.98 shot</td><td>matched (+58.8 s)</td></tr>
+<tr><td class="num">54</td><td>tackle</td><td>—</td><td>missed</td></tr>
+<tr><td class="num">65</td><td>shot</td><td>65.56 corner</td><td>missed</td></tr>
+<tr><td class="num">76</td><td>shot</td><td>—</td><td>missed</td></tr>
+<tr><td class="num">80</td><td>goal</td><td>79.63 goal</td><td>matched (−22.2 s)</td></tr>
+<tr><td class="num">81</td><td>goal</td><td>80.78 goal</td><td>matched (−13.2 s)</td></tr>
+<tr><td class="num">85</td><td>shot</td><td>—</td><td>missed</td></tr>
+<tr><td class="num">99</td><td>shot</td><td>—</td><td>missed</td></tr>
+</tbody>
+</table>
+</div>
+<p>Object detection is a separate measurement. Table 6 compares YOLO26n with the paused YOLOv5lu run. YOLO26n is fractionally ahead in aggregate mAP, but the budgets are not equal: 50 vs 33 epochs and 2.39 M vs 53 M parameters. Per-class YOLO26n mAP50–95 is 0.621 for Player, 0.291 for Ball and 0.530 for Referee. The low Ball score is why the ball path is interpolated rather than trusted, and it is a plausible contributor to the missed shot/tackle events.</p>
+<div class="tbl-wrap">
+<div class="tbl-caption"><b>Table 6.</b> Object detection on the V1 validation split. This is not event-spotting accuracy.</div>
+<table class="tbl">
+<thead><tr><th>Model</th><th class="num">Params</th><th class="num">Epochs</th><th class="num">mAP50</th><th class="num">mAP50–95</th><th class="num">Precision</th><th class="num">Recall</th></tr></thead>
+<tbody>
+<tr><td>YOLO26n</td><td class="num">2.39 M</td><td class="num">50</td><td class="num">0.805</td><td class="num">0.481</td><td class="num">0.864</td><td class="num">0.763</td></tr>
+<tr><td>YOLOv5lu</td><td class="num">53 M</td><td class="num">33</td><td class="num">0.795</td><td class="num">0.459</td><td class="num">0.854</td><td class="num">0.752</td></tr>
+</tbody>
+</table>
+</div>
+<div class="verdict"><strong>Result.</strong> The score-bug goal path is reliable enough to build on. The general event classifier is not: it finds one third of reference shots, no tackles, and emits more pass/dead-time lines than event lines. Detection mAP must not be reported as event-spotting accuracy.</div>
+
+<h3 id="training">5.4 Training dynamics</h3>
+<p>Figure 7 shows the YOLO26n training and validation curves. The box and classification losses fall steadily, and mAP50 rises from 0.538 at epoch 1 to 0.806 at epoch 50; mAP50–95 follows from 0.269 to 0.480. The curve is still improving at the final epoch, so 50 epochs is a budget choice rather than a converged optimum. Figure 8 shows the GPT-2 LoRA loss: a rapid fall from 3.877 to about 1.0 in the first epoch, then a slow, noisy decline to 0.779 at step 2,481. The final held-out acceptance is not a monotone function of training loss; language quality and factual grounding are different objectives.</p>
+<figure class="figure">
+  <div class="chart-panel"><div class="chart-title">YOLO26n · training loss</div><svg id="yoloLoss" class="chart-svg" viewBox="0 0 760 250" role="img" aria-label="YOLO26n box and classification training loss over 50 epochs"></svg></div>
+  <div class="chart-panel" style="margin-top:10px"><div class="chart-title">YOLO26n · validation mAP</div><svg id="yoloMap" class="chart-svg" viewBox="0 0 760 250" role="img" aria-label="YOLO26n mAP50 and mAP50-95 over 50 epochs"></svg></div>
+  <figcaption><b>Figure 7.</b> YOLO26n training curves, 640 px and 50 epochs. mAP50 reaches 0.806 and mAP50–95 0.480 at the final epoch; the model is still improving, so the schedule is a compute constraint, not a converged optimum.</figcaption>
+</figure>
+<figure class="figure">
+  <div class="chart-panel"><div class="chart-title">GPT-2 LoRA v4 · training loss</div><svg id="gpt2Loss" class="chart-svg" viewBox="0 0 760 250" role="img" aria-label="GPT-2 LoRA training loss over 2481 steps, falling from 3.877 to 0.779"></svg></div>
+  <figcaption><b>Figure 8.</b> GPT-2 v4 LoRA training loss over 2,481 steps. The rapid first-epoch drop is followed by a slow, noisy decline; the final loss is 0.779.</figcaption>
+</figure>
+
+<h3>5.5 Cost</h3>
+<p>Table 7 reports the measured compute and an illustrative human baseline. A full match costs about one cent of local electricity or $0.39 on a cloud A10G. Training both models for 3.64 hours costs $0.109 locally or $4.40 at the cloud rate. The human scenarios are illustrative: a two-person team at $50/h for three live hours or four pre-recorded hours costs $300 or $400. Across the $25–$100/h range, cloud compute is roughly 400–1,500× cheaper. The caveat is that compute is not the only cost: latency, quality review and paid TTS are excluded.</p>
+<div class="tbl-wrap">
+<div class="tbl-caption"><b>Table 7.</b> Cost per 64.5-minute match. Local electricity and cloud rates are measured/assumed; human rates are illustrative, not quotes.</div>
+<table class="tbl">
+<thead><tr><th>Item</th><th class="num">Local RTX 2050</th><th class="num">Cloud g5.2xlarge</th><th class="num">Human team</th></tr></thead>
+<tbody>
+<tr><td>Inference</td><td class="num">$0.010</td><td class="num">$0.392</td><td class="num">$300 live / $400 pre-recorded</td></tr>
+<tr><td>Training (both models)</td><td class="num">$0.109</td><td class="num">$4.40</td><td class="num">—</td></tr>
+<tr><td>Training hours</td><td class="num">3.64 h</td><td class="num">3.64 h</td><td class="num">—</td></tr>
+<tr><td>TTS calls / speech</td><td class="num">43 / 412.2 s</td><td class="num">43 / 412.2 s</td><td class="num">—</td></tr>
+</tbody>
+</table>
+</div>
+<figure class="figure">
+  <div class="log-chart" role="img" aria-label="Log-scale cost per match minute: local 0.0002 dollars, cloud 0.006 dollars, human 4.65 dollars.">
+    <div class="log-line">
+      <span class="log-tick" style="left:0%"></span><span class="log-lab" style="left:0%">$0.0001</span>
+      <span class="log-tick" style="left:20%"></span><span class="log-lab" style="left:20%">$0.001</span>
+      <span class="log-tick" style="left:40%"></span><span class="log-lab" style="left:40%">$0.01</span>
+      <span class="log-tick" style="left:60%"></span><span class="log-lab" style="left:60%">$0.1</span>
+      <span class="log-tick" style="left:80%"></span><span class="log-lab" style="left:80%">$1</span>
+      <span class="log-tick" style="left:100%"></span><span class="log-lab" style="left:100%">$10</span>
+      <span class="log-dot" style="left:6%;background:var(--accent)"></span><span class="log-dot-label" style="left:14%">local $0.0002</span>
+      <span class="log-dot" style="left:36%;background:var(--accent2)"></span><span class="log-dot-label" style="left:38%">cloud $0.006</span>
+      <span class="log-dot" style="left:93%;background:var(--warn)"></span><span class="log-dot-label" style="left:84%">human $4.65</span>
+    </div>
+  </div>
+  <figcaption><b>Figure 9.</b> Cost per match minute on a log scale. The local and cloud points are two to three orders of magnitude below the human scenario; the barrier to deployment is quality and latency, not compute.</figcaption>
+</figure>
+</section>
+
+<section class="section">
+<h2>6. Discussion</h2>
+<p>The experiments support a narrower claim than “automatic commentary.” The pipeline is a cheap, auditable, pre-recorded system whose goal path is reliable and whose general event layer is not yet good enough for broadcast output. Three findings organise the rest.</p>
+<p><b>Score-bug anchoring is the strongest component.</b> A persistent digit flip is a high-precision signal that survives replays, close-ups and celebration cuts, and it names the scoring side. The full-match run finds both goals with precision and recall 1.00. The main engineering requirement is to carry the anchored side into the realised line; the 5-minute chunk shows what happens when that link is missing.</p>
+<p><b>Language quality and factuality are separate objectives.</b> GPT-2 v4 more than doubles ROUGE-L over templates and writes human-length lines, but it invents shots, misnames teams and can miss a goal. The validator improves precision but accepts 95% of lines on this prompt set; it checks words, not truth. A template fallback is safer but not sufficient when the feature layer itself carries the wrong team.</p>
+<p><b>Live operation is an architectural problem, not a speed knob.</b> The full run is faster than real time in aggregate, but the first line appears after 16.6 minutes. The causal chunk is faster but factually worse. A live system needs streaming perception, incremental speech and explicit side propagation; the current batch architecture should be described as pre-recorded.</p>
+<p>For the paper's framing, the strongest contribution is the separation of deterministic facts from language and the score-bug goal path. The weakest links are general event spotting, team-side propagation and live latency. Reporting those weaknesses is more useful than claiming another state-of-the-art commentary model.</p>
+</section>
+
+<section class="section">
+<h2>7. Threats to Validity</h2>
+<p><b>Reference validity.</b> The ten event moments are curated from the earlier highlight reel, not an exhaustive independent annotation. The 0.40 recall is a consistency check against those moments; event precision for shots, tackles and corners is not measured. The 2/2 goal result is exact for this recording but has only two samples.</p>
+<p><b>External validity.</b> All end-to-end results come from one 64.5-minute broadcast, one competition and one production style. The score-bug boxes are tuned to this overlay; another broadcaster would need recalibration. The detector was trained on a small Roboflow export.</p>
+<p><b>Construct validity.</b> BLEU, ROUGE and METEOR measure overlap, not truth or entertainment. The validator acceptance rate is not a human preference score. No human evaluation of commentary quality was run; the paper reports the need for one.</p>
+<p><b>Budget validity.</b> YOLO26n and YOLOv5lu did not receive equal epochs or parameter budgets, so the mAP comparison is descriptive, not a controlled model comparison. The human cost is illustrative; paid TTS, storage and egress are excluded.</p>
+<p><b>Reproducibility.</b> The pipeline is deterministic given the same video and model weights, but the generative language model samples; lines vary across runs. The reported commentary examples are single samples.</p>
+</section>
+
+<section class="section">
+<h2>8. Conclusion</h2>
+<p>Matchcall shows that a small, modular, fact-grounded pipeline can turn a full broadcast into voiced commentary on a consumer GPU at a cost far below a human team. The goal path works because the score bug is an explicit, high-precision signal; the language path works well enough to produce human-length lines; the cost is negligible. The system does not yet work as live commentary, does not find most non-goal events, and can attribute a goal to the wrong team. Those are the next problems: streaming architecture, side propagation, better event annotation and a human evaluation of commentary quality. The broader lesson is that separating facts from language makes both the successes and the failures measurable.</p>
+</section>
+
+<section class="section">
+<h2>References</h2>
+<ol class="references">
+<li>S. Giancola, M. Amine, T. Dghaily, and B. Ghanem, “SoccerNet: A scalable dataset for action spotting in soccer videos,” in <i>Proc. CVPR Workshops</i>, 2018, pp. 1711–1721.</li>
+<li>A. Deliège, A. Cioppa, S. Giancola, et al., “SoccerNet-v2: A dataset and benchmarks for holistic understanding of broadcast soccer videos,” in <i>Proc. CVPR Workshops</i>, 2021, pp. 4508–4519.</li>
+<li>A. Cioppa, A. Deliège, S. Giancola, et al., “A context-aware loss function for action spotting in soccer videos,” in <i>Proc. CVPR</i>, 2020, pp. 13126–13136.</li>
+<li>J. Hong, H. Zhang, M. Gharbi, M. Fisher, and K. Fatahalian, “Spotting temporally precise, fine-grained events in video,” in <i>Proc. ECCV</i>, 2022, pp. 33–51.</li>
+<li>A. Cioppa, S. Giancola, A. Deliège, et al., “SoccerNet 2023 challenges results,” arXiv:2309.06006, 2023.</li>
+<li>Y. Zhang, P. Sun, Y. Jiang, et al., “ByteTrack: Multi-object tracking by associating every detection box,” in <i>Proc. ECCV</i>, 2022.</li>
+<li>Y. Cui, C. Zeng, X. Zhao, et al., “SportsMOT: A large multi-object tracking dataset in multiple sports scenes,” in <i>Proc. ICCV</i>, 2023, pp. 9921–9931.</li>
+<li>A. Cioppa, S. Giancola, A. Deliège, et al., “SoccerNet-Tracking: Multiple object tracking dataset and benchmark in soccer videos,” in <i>Proc. CVPR Workshops</i>, 2022, pp. 3491–3502.</li>
+<li>R. Naik, M. Hashmi, Z. Geem, and N. Bokde, “DeepPlayer-Track: Player and referee tracking with jersey color recognition in soccer,” <i>IEEE Access</i>, vol. 10, pp. 32494–32509, 2022.</li>
+<li>Y. Guo, H. Zeng, X. Deng, et al., “Automatic estimation of football possession via improved YOLOv8 detection and DBSCAN-based team classification,” <i>Sensors</i>, vol. 26, no. 4, 1252, 2026.</li>
+<li>K. Tanaka-Ishii, S. Noda, I. Frank, et al., “MIKE: An automatic commentary system for soccer,” in <i>Proc. ICMAS</i>, 1998, pp. 285–292.</li>
+<li>H. Mkhallati, A. Cioppa, S. Giancola, B. Ghanem, and M. Van Droogenbroeck, “SoccerNet-Caption: Dense video captioning for soccer broadcasts commentaries,” in <i>Proc. CVPR Workshops</i>, 2023, pp. 5074–5085.</li>
+<li>J. Rao, J. Wu, Z. Liu, et al., “MatchTime: Towards automatic soccer game commentary generation,” in <i>Proc. EMNLP</i>, 2024, pp. 1671–1685.</li>
+<li>X. You, J. Huang, Y. Xie, et al., “TimeSoccer: An end-to-end multimodal large language model for soccer commentary generation,” in <i>Proc. ACM Multimedia</i>, 2025, pp. 3418–3427.</li>
+<li>Y. Li, J. He, X. Zu, et al., “Multi-modal large language model with RAG strategies in soccer commentary generation,” in <i>Proc. WACV</i>, 2025, pp. 6197–6206.</li>
+<li>E. Hu, Y. Shen, P. Wallis, et al., “LoRA: Low-rank adaptation of large language models,” in <i>Proc. ICLR</i>, 2022.</li>
+<li>A. Radford, J. Wu, R. Child, et al., “Language models are unsupervised multitask learners,” OpenAI technical report, 2019.</li>
+<li>S. Min, K. Krishna, X. Lyu, et al., “FActScore: Fine-grained atomic evaluation of factual precision in long-form text generation,” in <i>Proc. EMNLP</i>, 2023, pp. 12076–12100.</li>
+<li>Z. Ji, N. Lee, R. Frieske, et al., “Survey of hallucination in natural language generation,” <i>ACM Computing Surveys</i>, vol. 55, no. 12, pp. 1–38, 2023.</li>
+<li>P. Lewis, E. Perez, A. Piktus, et al., “Retrieval-augmented generation for knowledge-intensive NLP tasks,” in <i>Proc. NeurIPS</i>, 2020.</li>
+<li>J. Shen, R. Pang, R. Weiss, et al., “Natural TTS synthesis by conditioning WaveNet on mel spectrogram predictions,” in <i>Proc. ICASSP</i>, 2018.</li>
+<li>Y. Ren, C. Hu, X. Tan, et al., “FastSpeech 2: Fast and high-quality end-to-end text to speech,” in <i>Proc. ICLR</i>, 2021.</li>
+<li>J. Kim, J. Kong, and J. Son, “Conditional variational autoencoder with adversarial learning for end-to-end text-to-speech,” in <i>Proc. ICML</i>, 2021.</li>
+<li>Y. Li, M. Han, V. Raghavan, et al., “StyleTTS 2: Towards human-level text-to-speech through style diffusion and adversarial training with large speech language models,” in <i>Proc. NeurIPS</i>, 2023.</li>
+<li>Fish Audio, “Launching Fish Audio S1: A frontier text-to-speech audio foundation model,” vendor blog, 2025.</li>
+<li>J. Luiten, A. Osep, P. Dendorfer, et al., “HOTA: A higher order metric for evaluating multi-object tracking,” <i>IJCV</i>, vol. 129, no. 2, pp. 548–578, 2020.</li>
+<li>K. Papineni, S. Roukos, T. Ward, and W. Zhu, “BLEU: A method for automatic evaluation of machine translation,” in <i>Proc. ACL</i>, 2002, pp. 311–318.</li>
+<li>C.-Y. Lin, “ROUGE: A package for automatic evaluation of summaries,” in <i>Proc. ACL Workshop</i>, 2004, pp. 74–81.</li>
+<li>S. Banerjee and A. Lavie, “METEOR: An automatic metric for MT evaluation with improved correlation with human judgments,” in <i>Proc. ACL Workshop</i>, 2005, pp. 65–72.</li>
+<li>S. Ravuru, “Commentary generation for soccer highlights,” arXiv:2508.07543, 2025.</li>
+<li>D. Xarles, S. Escalera, T. Moeslund, and A. Clapés, “ASTRA: An action spotting transformer for soccer,” in <i>Proc. MMSports</i>, 2023, pp. 93–102.</li>
+<li>J. Redmon, S. Divvala, R. Girshick, and A. Farhadi, “You only look once: Unified, real-time object detection,” in <i>Proc. CVPR</i>, 2016, pp. 779–788.</li>
+<li>ClearML, “Task and experiment tracking documentation,” clear.ml/docs, 2025.</li>
+<li>J. Rao, J. Wu, B. Zhang, et al., “Towards universal soccer video understanding,” in <i>Proc. CVPR</i>, 2025, pp. 8384–8394.</li>
+<li>K. Bernardin and R. Stiefelhagen, “Evaluating multiple object tracking performance: The CLEAR MOT metrics,” <i>EURASIP J. Image Video Process.</i>, 2008.</li>
+<li>E. Ristani, F. Solera, R. Zou, et al., “Performance measures and a data set for multi-target, multi-camera tracking,” in <i>Proc. ECCV Workshops</i>, 2016, pp. 17–35.</li>
+<li>Roboflow Universe, “Football-players-detection dataset,” 2023. [Online]. Available: https://universe.roboflow.com/roboflow-uc1d1/football-players-detection</li>
+<li>S. Giancola and B. Ghanem, “Temporally-aware feature pooling for action spotting in soccer broadcasts,” in <i>Proc. CVPR Workshops</i>, 2021, pp. 4490–4499.</li>
+</ol>
+</section>
+
+<section class="section">
+<h2>Appendix A. Reproducibility</h2>
+<p>The main artifacts are produced by the following commands. The full-match job is <code>7c23a8a91829</code>; the corrected goal clip is <code>8cdba651f954</code>; the 5-minute chunk is <code>feebe1ed5d60</code>.</p>
+<pre>python scripts/compare_commentary.py --n 40 --device cuda
+python scripts/evaluate_event_spotting.py
+python scripts/compile_experiments.py</pre>
+<p class="small">Data and outputs: <code>output/comparison/commentary_comparison.json</code>, <code>output/experiments/event_spotting.json</code>, <code>output/experiments/experiment_results.json</code>, <code>output/experiments/full_match_job.json</code>, <code>output/experiments/chunk_job.json</code>. Models: <code>models/yolo26/yolo26n_v1_640</code>, <code>models/gpt2_lora_v4</code>. Commit 7f1a826.</p>
+</section>
+
+</div>
+
+<script>
+const YOLO = {"epochs":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50],"box":[1.7976,1.7702,1.7703,1.7473,1.7234,1.6808,1.6722,1.6637,1.6337,1.6427,1.6147,1.6113,1.6116,1.5784,1.5788,1.5729,1.5581,1.5481,1.5411,1.548,1.5305,1.5257,1.5119,1.5104,1.5,1.5007,1.4823,1.4928,1.4647,1.4763,1.4649,1.4507,1.4463,1.4423,1.4288,1.4237,1.408,1.4179,1.4144,1.415,1.359,1.3426,1.3395,1.3299,1.3216,1.3174,1.3106,1.3108,1.2986,1.2967],"cls":[3.0403,1.2251,1.1296,1.0893,1.0465,1.0133,0.9921,0.9713,0.9487,0.9378,0.9279,0.9177,0.9158,0.8801,0.8704,0.87,0.8472,0.8365,0.8246,0.8343,0.8223,0.8157,0.7913,0.7977,0.7851,0.7724,0.7653,0.7716,0.7476,0.747,0.738,0.7336,0.7316,0.7202,0.7113,0.7098,0.6932,0.7043,0.6956,0.6939,0.5945,0.5814,0.5856,0.586,0.5757,0.5686,0.5637,0.5625,0.5537,0.547],"l1":[0.0066,0.0066,0.0067,0.0065,0.0064,0.0063,0.0061,0.0061,0.0059,0.0059,0.0059,0.0059,0.0059,0.0058,0.0057,0.0056,0.0056,0.0055,0.0055,0.0056,0.0055,0.0054,0.0054,0.0054,0.0053,0.0052,0.0051,0.0053,0.0052,0.0051,0.0051,0.005,0.0051,0.005,0.0049,0.005,0.0049,0.0049,0.0048,0.0048,0.0055,0.0054,0.0055,0.0053,0.0053,0.0053,0.0052,0.0052,0.0051,0.005],"map50":[0.5384,0.5784,0.5916,0.6331,0.665,0.6685,0.671,0.6961,0.6816,0.7024,0.716,0.6907,0.7041,0.7303,0.7309,0.7471,0.7465,0.7441,0.7532,0.7517,0.7571,0.757,0.7741,0.7751,0.7763,0.7807,0.7732,0.7763,0.7805,0.7778,0.7865,0.7867,0.7887,0.7884,0.7927,0.7887,0.7897,0.7979,0.801,0.7986,0.7962,0.803,0.8031,0.8019,0.8038,0.8032,0.8024,0.8026,0.8033,0.8056],"map5095":[0.269,0.2859,0.3078,0.3216,0.3504,0.3444,0.3563,0.3671,0.3587,0.3772,0.3956,0.377,0.3822,0.3975,0.4041,0.4142,0.4131,0.4149,0.42,0.4242,0.4267,0.4269,0.4379,0.4392,0.447,0.4447,0.445,0.4443,0.4508,0.4547,0.4573,0.4596,0.4622,0.4605,0.461,0.4626,0.4654,0.4684,0.4713,0.4715,0.4688,0.4762,0.4753,0.4767,0.4768,0.4776,0.4782,0.4785,0.4794,0.4799],"precision":[0.6338,0.6582,0.6353,0.7332,0.753,0.7466,0.7453,0.7573,0.7454,0.7642,0.7962,0.754,0.7907,0.7897,0.7692,0.8138,0.8045,0.8071,0.8058,0.8338,0.8192,0.8281,0.8367,0.848,0.833,0.8364,0.8436,0.8356,0.831,0.8387,0.8511,0.8463,0.8476,0.8522,0.8535,0.8655,0.8574,0.8587,0.849,0.8593,0.8566,0.8644,0.854,0.859,0.8613,0.8637,0.8583,0.8667,0.8633,0.8646],"recall":[0.5309,0.5623,0.5669,0.6016,0.6174,0.6263,0.6465,0.6437,0.6524,0.6542,0.6596,0.6476,0.6645,0.6878,0.6986,0.6949,0.6902,0.6982,0.7112,0.6956,0.7085,0.7071,0.7163,0.7267,0.7246,0.7321,0.7232,0.7291,0.7299,0.7371,0.7284,0.7404,0.7471,0.7495,0.7533,0.7456,0.7465,0.7574,0.7584,0.7534,0.7543,0.7576,0.7614,0.7568,0.7622,0.7621,0.7593,0.7598,0.7632,0.7654]};
+const GPT2 = [{"step":20,"epoch":0.02416918429003021,"loss":3.877,"lr":2.6666666666666667e-05},{"step":40,"epoch":0.04833836858006042,"loss":3.4392,"lr":5.333333333333333e-05},{"step":60,"epoch":0.07250755287009064,"loss":2.6461,"lr":8e-05},{"step":80,"epoch":0.09667673716012085,"loss":2.1583,"lr":9.979218620116376e-05},{"step":100,"epoch":0.12084592145015106,"loss":1.929,"lr":9.896093100581879e-05},{"step":120,"epoch":0.14501510574018128,"loss":1.786,"lr":9.812967581047382e-05},{"step":140,"epoch":0.1691842900302115,"loss":1.7304,"lr":9.729842061512884e-05},{"step":160,"epoch":0.1933534743202417,"loss":1.6563,"lr":9.646716541978388e-05},{"step":180,"epoch":0.2175226586102719,"loss":1.5758,"lr":9.56359102244389e-05},{"step":200,"epoch":0.24169184290030213,"loss":1.4958,"lr":9.480465502909394e-05},{"step":220,"epoch":0.26586102719033233,"loss":1.4758,"lr":9.397339983374897e-05},{"step":240,"epoch":0.29003021148036257,"loss":1.4363,"lr":9.3142144638404e-05},{"step":260,"epoch":0.31419939577039274,"loss":1.4075,"lr":9.231088944305903e-05},{"step":280,"epoch":0.338368580060423,"loss":1.3017,"lr":9.147963424771405e-05},{"step":300,"epoch":0.36253776435045315,"loss":1.2925,"lr":9.064837905236909e-05},{"step":320,"epoch":0.3867069486404834,"loss":1.2687,"lr":8.981712385702411e-05},{"step":340,"epoch":0.4108761329305136,"loss":1.2943,"lr":8.898586866167914e-05},{"step":360,"epoch":0.4350453172205438,"loss":1.2551,"lr":8.819617622610141e-05},{"step":380,"epoch":0.459214501510574,"loss":1.2422,"lr":8.736492103075644e-05},{"step":400,"epoch":0.48338368580060426,"loss":1.2595,"lr":8.653366583541147e-05},{"step":420,"epoch":0.5075528700906344,"loss":1.2685,"lr":8.570241064006649e-05},{"step":440,"epoch":0.5317220543806647,"loss":1.1777,"lr":8.487115544472153e-05},{"step":460,"epoch":0.5558912386706949,"loss":1.1557,"lr":8.403990024937656e-05},{"step":480,"epoch":0.5800604229607251,"loss":1.2105,"lr":8.320864505403159e-05},{"step":500,"epoch":0.6042296072507553,"loss":1.105,"lr":8.237738985868662e-05},{"step":520,"epoch":0.6283987915407855,"loss":1.1994,"lr":8.154613466334164e-05},{"step":540,"epoch":0.6525679758308157,"loss":1.1319,"lr":8.071487946799668e-05},{"step":560,"epoch":0.676737160120846,"loss":1.1633,"lr":7.98836242726517e-05},{"step":580,"epoch":0.7009063444108762,"loss":1.1489,"lr":7.905236907730674e-05},{"step":600,"epoch":0.7250755287009063,"loss":1.1084,"lr":7.822111388196176e-05},{"step":620,"epoch":0.7492447129909365,"loss":1.0697,"lr":7.73898586866168e-05},{"step":640,"epoch":0.7734138972809668,"loss":1.1317,"lr":7.655860349127182e-05},{"step":660,"epoch":0.797583081570997,"loss":1.1053,"lr":7.572734829592685e-05},{"step":680,"epoch":0.8217522658610272,"loss":1.0939,"lr":7.489609310058189e-05},{"step":700,"epoch":0.8459214501510574,"loss":1.0356,"lr":7.406483790523692e-05},{"step":720,"epoch":0.8700906344410876,"loss":1.037,"lr":7.323358270989194e-05},{"step":740,"epoch":0.8942598187311178,"loss":1.1323,"lr":7.240232751454698e-05},{"step":760,"epoch":0.918429003021148,"loss":1.0644,"lr":7.1571072319202e-05},{"step":780,"epoch":0.9425981873111783,"loss":1.0125,"lr":7.073981712385704e-05},{"step":800,"epoch":0.9667673716012085,"loss":0.9869,"lr":6.990856192851206e-05},{"step":820,"epoch":0.9909365558912386,"loss":1.0212,"lr":6.90773067331671e-05},{"step":840,"epoch":1.0151057401812689,"loss":0.9485,"lr":6.824605153782212e-05},{"step":860,"epoch":1.039274924471299,"loss":0.9234,"lr":6.741479634247715e-05},{"step":880,"epoch":1.0634441087613293,"loss":0.9999,"lr":6.658354114713217e-05},{"step":900,"epoch":1.0876132930513596,"loss":0.9642,"lr":6.575228595178721e-05},{"step":920,"epoch":1.1117824773413898,"loss":0.9529,"lr":6.492103075644223e-05},{"step":940,"epoch":1.13595166163142,"loss":0.933,"lr":6.408977556109727e-05},{"step":960,"epoch":1.1601208459214503,"loss":1.0171,"lr":6.325852036575229e-05},{"step":980,"epoch":1.1842900302114803,"loss":0.9868,"lr":6.242726517040732e-05},{"step":1000,"epoch":1.2084592145015105,"loss":0.9176,"lr":6.159600997506235e-05},{"step":1020,"epoch":1.2326283987915407,"loss":0.9294,"lr":6.076475477971738e-05},{"step":1040,"epoch":1.256797583081571,"loss":0.9159,"lr":5.993349958437241e-05},{"step":1060,"epoch":1.2809667673716012,"loss":0.9504,"lr":5.910224438902744e-05},{"step":1080,"epoch":1.3051359516616314,"loss":0.9091,"lr":5.827098919368247e-05},{"step":1100,"epoch":1.3293051359516617,"loss":0.9228,"lr":5.7439733998337496e-05},{"step":1120,"epoch":1.353474320241692,"loss":0.9232,"lr":5.6608478802992525e-05},{"step":1140,"epoch":1.3776435045317221,"loss":0.9947,"lr":5.577722360764755e-05},{"step":1160,"epoch":1.4018126888217521,"loss":0.9504,"lr":5.494596841230258e-05},{"step":1180,"epoch":1.4259818731117826,"loss":0.8683,"lr":5.411471321695761e-05},{"step":1200,"epoch":1.4501510574018126,"loss":0.9039,"lr":5.328345802161264e-05},{"step":1220,"epoch":1.4743202416918428,"loss":0.8772,"lr":5.245220282626767e-05},{"step":1240,"epoch":1.498489425981873,"loss":0.9494,"lr":5.1620947630922704e-05},{"step":1260,"epoch":1.5226586102719033,"loss":0.8735,"lr":5.078969243557773e-05},{"step":1280,"epoch":1.5468277945619335,"loss":0.9011,"lr":4.9958437240232754e-05},{"step":1300,"epoch":1.5709969788519638,"loss":0.9103,"lr":4.912718204488778e-05},{"step":1320,"epoch":1.595166163141994,"loss":0.8981,"lr":4.829592684954281e-05},{"step":1340,"epoch":1.619335347432024,"loss":0.8376,"lr":4.746467165419784e-05},{"step":1360,"epoch":1.6435045317220545,"loss":0.9247,"lr":4.663341645885287e-05},{"step":1380,"epoch":1.6676737160120845,"loss":0.8554,"lr":4.58021612635079e-05},{"step":1400,"epoch":1.691842900302115,"loss":0.8339,"lr":4.4970906068162926e-05},{"step":1420,"epoch":1.716012084592145,"loss":0.93,"lr":4.4139650872817955e-05},{"step":1440,"epoch":1.7401812688821754,"loss":0.8873,"lr":4.3308395677472984e-05},{"step":1460,"epoch":1.7643504531722054,"loss":0.8999,"lr":4.247714048212801e-05},{"step":1480,"epoch":1.7885196374622356,"loss":0.9015,"lr":4.164588528678304e-05},{"step":1500,"epoch":1.8126888217522659,"loss":0.8422,"lr":4.081463009143807e-05},{"step":1520,"epoch":1.836858006042296,"loss":0.795,"lr":3.99833748960931e-05},{"step":1540,"epoch":1.8610271903323263,"loss":0.8927,"lr":3.915211970074813e-05},{"step":1560,"epoch":1.8851963746223563,"loss":0.9128,"lr":3.8320864505403156e-05},{"step":1580,"epoch":1.9093655589123868,"loss":0.8601,"lr":3.7489609310058185e-05},{"step":1600,"epoch":1.9335347432024168,"loss":0.8784,"lr":3.665835411471322e-05},{"step":1620,"epoch":1.9577039274924473,"loss":0.8784,"lr":3.582709891936825e-05},{"step":1640,"epoch":1.9818731117824773,"loss":0.7999,"lr":3.499584372402328e-05},{"step":1660,"epoch":2.0060422960725077,"loss":0.8537,"lr":3.4164588528678306e-05},{"step":1680,"epoch":2.0302114803625377,"loss":0.8153,"lr":3.3333333333333335e-05},{"step":1700,"epoch":2.054380664652568,"loss":0.8842,"lr":3.2502078137988364e-05},{"step":1720,"epoch":2.078549848942598,"loss":0.7836,"lr":3.167082294264339e-05},{"step":1740,"epoch":2.102719033232628,"loss":0.8286,"lr":3.083956774729842e-05},{"step":1760,"epoch":2.1268882175226587,"loss":0.8161,"lr":3.000831255195345e-05},{"step":1780,"epoch":2.1510574018126887,"loss":0.8053,"lr":2.917705735660848e-05},{"step":1800,"epoch":2.175226586102719,"loss":0.8359,"lr":2.8345802161263507e-05},{"step":1820,"epoch":2.199395770392749,"loss":0.8414,"lr":2.7514546965918536e-05},{"step":1840,"epoch":2.2235649546827796,"loss":0.8401,"lr":2.6683291770573565e-05},{"step":1860,"epoch":2.2477341389728096,"loss":0.8243,"lr":2.5852036575228593e-05},{"step":1880,"epoch":2.27190332326284,"loss":0.813,"lr":2.5020781379883622e-05},{"step":1900,"epoch":2.29607250755287,"loss":0.8264,"lr":2.4189526184538654e-05},{"step":1920,"epoch":2.3202416918429005,"loss":0.8209,"lr":2.3358270989193683e-05},{"step":1940,"epoch":2.3444108761329305,"loss":0.8266,"lr":2.252701579384871e-05},{"step":1960,"epoch":2.3685800604229605,"loss":0.7934,"lr":2.1695760598503743e-05},{"step":1980,"epoch":2.392749244712991,"loss":0.8117,"lr":2.0864505403158772e-05},{"step":2000,"epoch":2.416918429003021,"loss":0.8036,"lr":2.00332502078138e-05},{"step":2020,"epoch":2.4410876132930515,"loss":0.8155,"lr":1.920199501246883e-05},{"step":2040,"epoch":2.4652567975830815,"loss":0.7992,"lr":1.8370739817123858e-05},{"step":2060,"epoch":2.489425981873112,"loss":0.8037,"lr":1.7539484621778887e-05},{"step":2080,"epoch":2.513595166163142,"loss":0.7801,"lr":1.6708229426433916e-05},{"step":2100,"epoch":2.5377643504531724,"loss":0.8339,"lr":1.5876974231088944e-05},{"step":2120,"epoch":2.5619335347432024,"loss":0.848,"lr":1.5045719035743975e-05},{"step":2140,"epoch":2.5861027190332324,"loss":0.8492,"lr":1.4214463840399003e-05},{"step":2160,"epoch":2.610271903323263,"loss":0.788,"lr":1.3383208645054032e-05},{"step":2180,"epoch":2.6344410876132933,"loss":0.7907,"lr":1.2551953449709061e-05},{"step":2200,"epoch":2.6586102719033233,"loss":0.7728,"lr":1.172069825436409e-05},{"step":2220,"epoch":2.6827794561933533,"loss":0.7913,"lr":1.088944305901912e-05},{"step":2240,"epoch":2.706948640483384,"loss":0.7436,"lr":1.0058187863674149e-05},{"step":2260,"epoch":2.731117824773414,"loss":0.7508,"lr":9.226932668329177e-06},{"step":2280,"epoch":2.7552870090634443,"loss":0.7649,"lr":8.395677472984206e-06},{"step":2300,"epoch":2.7794561933534743,"loss":0.764,"lr":7.564422277639236e-06},{"step":2320,"epoch":2.8036253776435043,"loss":0.7822,"lr":6.733167082294264e-06},{"step":2340,"epoch":2.8277945619335347,"loss":0.7509,"lr":5.901911886949293e-06},{"step":2360,"epoch":2.851963746223565,"loss":0.7451,"lr":5.0706566916043226e-06},{"step":2380,"epoch":2.876132930513595,"loss":0.8091,"lr":4.239401496259352e-06},{"step":2400,"epoch":2.900302114803625,"loss":0.7331,"lr":3.4081463009143812e-06},{"step":2420,"epoch":2.9244712990936557,"loss":0.7969,"lr":2.57689110556941e-06},{"step":2440,"epoch":2.9486404833836857,"loss":0.8604,"lr":1.7456359102244388e-06},{"step":2460,"epoch":2.972809667673716,"loss":0.7705,"lr":9.143807148794681e-07},{"step":2480,"epoch":2.996978851963746,"loss":0.7794,"lr":8.31255195344971e-08}];
+
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent){
+    const n=document.createElementNS(NS,tag);
+    for(const k in attrs) n.setAttribute(k,attrs[k]);
+    if(parent) parent.appendChild(n);
+    return n;
+  }
+  function lineChart(id, cfg){
+    const svg=document.getElementById(id); if(!svg) return;
+    const W=760,H=250,L=58,R=78,T=30,B=42;
+    const xMin=cfg.xMin??0, xMax=cfg.xMax??Math.max(...cfg.series.flatMap(s=>s.data.map(p=>p.x)));
+    const yMin=0, yMax=cfg.yMax??Math.max(...cfg.series.flatMap(s=>s.data.map(p=>p.y)))*1.08;
+    const X=v=>L+(v-xMin)/(xMax-xMin)*(W-L-R);
+    const Y=v=>H-B-(v-yMin)/(yMax-yMin)*(H-T-B);
+    // y grid
+    for(let i=0;i<=4;i++){
+      const val=yMin+(yMax-yMin)*i/4, yy=Y(val);
+      el('line',{x1:L,y1:yy,x2:W-R,y2:yy,stroke:'#e1e5df','stroke-width':1},svg);
+      el('text',{x:L-8,y:yy+3,'text-anchor':'end',fill:'#666b66',
+        'font-family':'IBM Plex Mono, monospace','font-size':10.5},svg).textContent=cfg.yFmt(val);
+    }
+    // x ticks
+    const ticks=cfg.xTickValues||Array.from({length:(cfg.xTicks||5)+1},(_,i)=>xMin+(xMax-xMin)*i/(cfg.xTicks||5));
+    for(const val of ticks){
+      const xx=X(val);
+      el('line',{x1:xx,y1:H-B,x2:xx,y2:H-B+4,stroke:'#b9c2b7','stroke-width':1},svg);
+      el('text',{x:xx,y:H-B+18,'text-anchor':'middle',fill:'#666b66',
+        'font-family':'IBM Plex Mono, monospace','font-size':10.5},svg).textContent=Math.round(val);
+    }
+    el('line',{x1:L,y1:H-B,x2:W-R,y2:H-B,stroke:'#111','stroke-width':1.2},svg);
+    el('line',{x1:L,y1:T,x2:L,y2:H-B,stroke:'#111','stroke-width':1.2},svg);
+    el('text',{x:W-R,y:H-4,'text-anchor':'end',fill:'#666b66',
+      'font-family':'Source Sans 3, sans-serif','font-size':11},svg).textContent=cfg.xLabel;
+    // legend
+    let lx=L;
+    for(const s of cfg.series){
+      el('line',{x1:lx,y1:16,x2:lx+18,y2:16,stroke:s.color,'stroke-width':2.2},svg);
+      const t=el('text',{x:lx+24,y:20,fill:'#333','font-family':'Source Sans 3, sans-serif',
+        'font-size':11.5},svg); t.textContent=s.name; lx+=34+s.name.length*6.2;
+    }
+    // series
+    for(const s of cfg.series){
+      if(!s.data.length) continue;
+      const d=s.data.map((p,i)=>(i?'L':'M')+X(p.x).toFixed(1)+' '+Y(p.y).toFixed(1)).join(' ');
+      el('path',{d,fill:'none',stroke:s.color,'stroke-width':2,
+        'stroke-linejoin':'round','stroke-linecap':'round'},svg);
+      const last=s.data[s.data.length-1];
+      el('circle',{cx:X(last.x),cy:Y(last.y),r:2.8,fill:s.color},svg);
+      el('text',{x:X(last.x)+6,y:Y(last.y)+3,fill:s.color,'font-family':'IBM Plex Mono, monospace',
+        'font-size':9.5},svg).textContent=cfg.yFmt(last.y);
+    }
+  }
+
+  lineChart('yoloLoss', {
+    xMin:1, xMax:50, yMax:3.2, yFmt:v=>v.toFixed(1), xLabel:'epoch', xTickValues:[1,10,20,30,40,50],
+    series:[
+      {name:'box',color:'#1f5c3a',data:YOLO.epochs.map((e,i)=>({x:e,y:YOLO.box[i]}))},
+      {name:'cls',color:'#0b6b73',data:YOLO.epochs.map((e,i)=>({x:e,y:YOLO.cls[i]}))}
+    ]
+  });
+  lineChart('yoloMap', {
+    xMin:1, xMax:50, yMax:1, yFmt:v=>v.toFixed(2), xLabel:'epoch', xTickValues:[1,10,20,30,40,50],
+    series:[
+      {name:'mAP50',color:'#1f5c3a',data:YOLO.epochs.map((e,i)=>({x:e,y:YOLO.map50[i]}))},
+      {name:'mAP50–95',color:'#0b6b73',data:YOLO.epochs.map((e,i)=>({x:e,y:YOLO.map5095[i]}))}
+    ]
+  });
+  lineChart('gpt2Loss', {
+    xMin:0, xMax:2480, yMax:4, yFmt:v=>v.toFixed(1), xLabel:'step', xTickValues:[0,500,1000,1500,2000,2480],
+    series:[{name:'loss',color:'#1f5c3a',data:GPT2.map(p=>({x:p.step,y:p.loss}))}]
+  });
+
+  // Event timeline
+  const svg=document.getElementById('event-timeline');
+  if(!svg) return;
+  const MIN0=35,MIN1=100,X0=64,X1=884,REF_Y=78,DET_Y=238,AXIS_Y=158;
+  const C={goal:'#1f7a2e',shot:'#0b6b73',tackle:'#a36600',corner:'#6b4bb5',
+    pass:'#9aa69b',dead_time:'#c8cec6',miss:'#a33a1f',ink:'#111',muted:'#666b66',
+    line:'#e1e5df',line2:'#c8cec6'};
+  const ref=[{m:38,k:'shot'},{m:40,k:'tackle'},{m:49,k:'shot'},{m:54,k:'tackle'},
+    {m:65,k:'shot'},{m:76,k:'shot'},{m:80,k:'goal'},{m:81,k:'goal'},
+    {m:85,k:'shot'},{m:99,k:'shot'}];
+  const det=[
+    {m:35.33,k:'pass'},{m:35.40,k:'dead_time'},{m:35.48,k:'pass'},{m:35.91,k:'dead_time'},
+    {m:36.01,k:'pass'},{m:38.85,k:'shot'},{m:38.91,k:'pass'},{m:40.55,k:'dead_time'},
+    {m:40.61,k:'pass'},{m:41.55,k:'dead_time'},{m:41.61,k:'pass'},{m:43.66,k:'dead_time'},
+    {m:43.73,k:'pass'},{m:45.53,k:'dead_time'},{m:45.68,k:'pass'},{m:49.98,k:'shot'},
+    {m:50.05,k:'pass'},{m:58.01,k:'corner'},{m:58.08,k:'pass'},{m:65.56,k:'corner'},
+    {m:65.63,k:'pass'},{m:74.05,k:'corner'},{m:74.11,k:'pass'},{m:77.28,k:'corner'},
+    {m:77.35,k:'pass'},{m:78.60,k:'dead_time'},{m:78.68,k:'pass'},{m:79.63,k:'goal'},
+    {m:79.70,k:'shot'},{m:79.96,k:'pass'},{m:80.78,k:'goal'},{m:80.85,k:'pass'},
+    {m:80.93,k:'shot'},{m:81.01,k:'pass'},{m:82.40,k:'shot'},{m:82.46,k:'pass'},
+    {m:94.08,k:'corner'},{m:94.15,k:'pass'}];
+  const matched=[{r:38,d:38.85},{r:49,d:49.98},{r:80,d:79.63},{r:81,d:80.78}];
+  const x=m=>X0+(m-MIN0)/(MIN1-MIN0)*(X1-X0);
+  function txt(xx,yy,s,attrs){
+    const t=el('text',Object.assign({x:xx,y:yy,fill:C.muted,
+      'font-family':'IBM Plex Mono, monospace','font-size':10.5,
+      'text-anchor':'middle'},attrs||{}),svg); t.textContent=s; return t;
+  }
+  for(let m=35;m<=100;m+=5){
+    const xx=x(m);
+    el('line',{x1:xx,y1:54,x2:xx,y2:266,stroke:m%10===0?C.line2:C.line,
+      'stroke-width':m%10===0?1:.6,'stroke-dasharray':m%10===0?'':'2 4'},svg);
+    txt(xx,286,m+'′');
+  }
+  txt(X0,28,'REFERENCE',{fill:C.shot,'text-anchor':'start','font-size':11,'font-weight':'600','letter-spacing':'1.2'});
+  txt(X0,206,'DETECTED',{fill:C.goal,'text-anchor':'start','font-size':11,'font-weight':'600','letter-spacing':'1.2'});
+  el('line',{x1:X0,y1:AXIS_Y,x2:X1,y2:AXIS_Y,stroke:C.line2,'stroke-width':1},svg);
+  for(const r of ref){
+    const xx=x(r.m), isMatch=matched.some(m=>m.r===r.m);
+    const c=el('circle',{cx:xx,cy:REF_Y,r:7,fill:C[r.k]||C.muted,
+      stroke:isMatch?C.goal:C.miss,'stroke-width':isMatch?2:1.5},svg);
+    c.appendChild(el('title',{},svg)).textContent=r.m+'′ reference: '+r.k;
+    if(!isMatch){
+      el('circle',{cx:xx,cy:REF_Y,r:7,fill:C.miss,stroke:'#fff','stroke-width':1.5},svg);
+      el('path',{d:`M${xx-4} ${REF_Y-4} L${xx+4} ${REF_Y+4} M${xx+4} ${REF_Y-4} L${xx-4} ${REF_Y+4}`,
+        stroke:'#fff','stroke-width':2,'stroke-linecap':'round'},svg);
+    }
+  }
+  txt(x(80.5),52,'goals 80′/81′',{fill:C.goal,'font-size':10.5,'font-weight':'600'});
+  for(const m of matched){
+    el('line',{x1:x(m.r),y1:REF_Y+8,x2:x(m.d),y2:DET_Y-10,
+      stroke:C.goal,'stroke-width':1,'stroke-dasharray':'4 4',opacity:.85},svg);
+  }
+  for(const d of det){
+    const xx=x(d.m), strong=['goal','shot','corner','tackle'].includes(d.k);
+    const yy=strong?224:230;
+    const tick=el('line',{x1:xx,y1:yy,x2:xx,y2:DET_Y+8,stroke:C[d.k]||C.muted,
+      'stroke-width':strong?3:1.3,opacity:strong?.95:.38},svg);
+    tick.appendChild(el('title',{},svg)).textContent=d.m.toFixed(1)+'′ detected: '+d.k;
+    if(matched.some(m=>Math.abs(m.d-d.m)<.01)){
+      el('circle',{cx:xx,cy:DET_Y+8,r:5,fill:'none',stroke:C.goal,'stroke-width':1.5},svg);
+    }
+  }
+})();
+</script>
+</body>
+</html>
