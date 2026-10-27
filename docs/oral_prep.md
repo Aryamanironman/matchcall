@@ -61,7 +61,7 @@ Broadcast commentary is manual, expensive and does not scale to every match or l
 Not a new state of the art. It is an auditable, reproducible instantiation of the full broadcast-to-speech pipeline: deterministic facts separated from language, score-bug goal anchors, a grounding validator with a grounded template safety net, and an honest evaluation of where the system fails.
 
 **Why not use a large multimodal model end-to-end?**
-Cost, reproducibility and auditability. A 7B MLLM is hard to run on a 4 GB GPU, and it decides facts and language together, so a hallucinated score is hard to separate from a language error. My design lets me inspect the fact sheet before the language model sees it.
+Cost, reproducibility and auditability. A 7B MLLM is hard to run on a consumer GPU, and it decides facts and language together, so a hallucinated score is hard to separate from a language error. My design lets me inspect the fact sheet before the language model sees it.
 
 **Why GPT-2 and LoRA?**
 GPT-2 is small enough to train and run on a consumer GPU. LoRA freezes the base weights and trains low-rank adapters, which reduces trainable parameters and memory. I am not claiming GPT-2 is better than a large model; I am testing whether a small model plus grounding is useful.
@@ -88,7 +88,7 @@ The score bug is a persistent broadcast graphic that flips exactly on a goal and
 No. It is pre-recorded. The full match is faster than real time in aggregate — 19.4 minutes for 64.5 minutes — but the first line appears after 16.6 minutes because the pipeline scores, writes and only then voices. Shorter inputs alone do not make it live; it needs streaming perception, incremental TTS and side propagation.
 
 **Why YOLO26n and not YOLOv5lu?**
-I had a 4 GB GPU and a four-hour window. YOLO26x/l could not finish a meaningful run in that time; YOLO26n could. It reached mAP50 0.805 / mAP50–95 0.481 in 2.70 hours. The comparison with YOLOv5lu is not equal-budget: 50 vs 33 epochs and 2.39 M vs 53 M parameters. I do not claim YOLO26 is proven better; the fair 640 px / 100-epoch SageMaker run is still pending.
+I had a consumer GPU and a four-hour window. YOLO26x/l could not finish a meaningful run in that time; YOLO26n could. It reached mAP50 0.805 / mAP50–95 0.481 in 2.70 hours. The comparison with YOLOv5lu is not equal-budget: 50 vs 33 epochs and 2.39 M vs 53 M parameters. I do not claim YOLO26 is proven better; the fair 640 px / 100-epoch SageMaker run is still pending.
 
 **Why use the score-bug reader?**
 It gives high-precision goal anchors, names the scoring side, and survives replays and celebration cuts. It also infers the score already on the board, so a clip starting at 2–1 is not treated as 0–0. The limitation is that it is tuned to this broadcaster’s overlay; another feed would need recalibration.
@@ -138,7 +138,7 @@ I would build the streaming path and the event annotation set first, because the
 “The goal path works — 2/2 with precision and recall 1.0. The general event classifier does not. That is exactly the finding: score-bug anchors are strong; the window classifier is weak. The paper reports both.”
 
 **“Why not just use a 7B model?”**
-“It would likely improve fluency, but it would not solve grounding by itself, and it would not fit the 4 GB target. My contribution is the fact layer and the auditability, not the largest possible language model.”
+“It would likely improve fluency, but it would not solve grounding by itself, and it would not fit the consumer-GPU target. My contribution is the fact layer and the auditability, not the largest possible language model.”
 
 ## 6. 60-second demo script
 

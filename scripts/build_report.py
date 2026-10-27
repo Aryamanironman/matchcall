@@ -180,7 +180,7 @@ def main() -> None:
 <section>
 <h2>YOLO26n — local speed run.</h2>
 <p class="sub">2.39 M parameters · 640 px · {y26['epochs']} epochs ·
-{y26['hours']:.2f} h on the RTX 2050 · ClearML task
+{y26['hours']:.2f} h on a consumer GPU · ClearML task
 <a href="https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8/tasks/63128dc3e2b64a69bd31cee4982c707a/output/log">63128dc3</a>.
 This run was sized to finish inside a four-hour window, so it is a nano-model
 result rather than the planned full-size comparison.</p>

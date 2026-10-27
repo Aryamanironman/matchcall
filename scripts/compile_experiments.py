@@ -23,7 +23,7 @@ FIG = ROOT / "docs" / "figures"
 ASSUMPTIONS = {
     "cloud_instance": "ml.g5.2xlarge",
     "cloud_usd_per_hour": 1.21,
-    "local_gpu": "RTX 2050 4 GB",
+    "local_gpu": "Local GPU",
     "local_power_kw": 0.10,
     "electricity_usd_per_kwh": 0.30,
     "human_team_size": 2,
@@ -204,7 +204,7 @@ def main() -> None:
               "a streaming pipeline with bounded latency.\n")
 
     md.append("## 4. Cost comparison\n")
-    md.append("| Item | Local RTX 2050 | Cloud ml.g5.2xlarge | Human team |")
+    md.append("| Item | Local GPU | Cloud ml.g5.2xlarge | Human team |")
     md.append("|---|---:|---:|---:|")
     md.append(f"| Inference per 64.5-min match | ${cost['inference_local_usd']:.3f} | "
               f"${cost['inference_cloud_usd']:.3f} | "

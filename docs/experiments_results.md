@@ -49,14 +49,14 @@ The full-match run is faster than real time in aggregate (0.30×), but it is a b
 
 ## 4. Cost comparison
 
-| Item | Local RTX 2050 | Cloud ml.g5.2xlarge | Human team |
+| Item | Local GPU | Cloud ml.g5.2xlarge | Human team |
 |---|---:|---:|---:|
 | Inference per 64.5-min match | $0.010 | $0.392 | $300 live / $400 pre-recorded |
 | Training (YOLO26n + GPT-2 v4) | $0.109 | $4.40 | — |
 | Training hours | 3.64 h | 3.64 h (same run) | — |
 | TTS | 43 calls, 412.2 s speech | same | — |
 
-Assumptions: cloud $1.21/h; local 100 W at $0.30/kWh; human team of 2 at $50/h for 3 h live / 4 h pre-recorded. Human rates are illustrative; the range is $25–$100/h. Fish: s2.1-pro-free tier; no API charge measured. Cloud storage/egress and paid TTS are excluded.
+Assumptions: cloud $1.21/h; local electricity at $0.30/kWh; human team of 2 at $50/h for 3 h live / 4 h pre-recorded. Human rates are illustrative; the range is $25–$100/h. Fish: s2.1-pro-free tier; no API charge measured. Cloud storage/egress and paid TTS are excluded.
 
 Across the human rate range, compute is roughly two to three orders of magnitude cheaper than the illustrative human team; the trade-off is latency and commentary quality, not raw cost.
 
