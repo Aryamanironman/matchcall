@@ -150,7 +150,29 @@ I would build the streaming path and the event annotation set first, because the
 
 If I upload a clip, the pipeline spots the score-bug goal anchor, tracks the players, writes a grounded description, GPT-2 realises it, the validator checks it, and Fish voices it. On the 81' France goal, the score bug flips 2–1 to 2–2, the reader infers the start score, and the goal is anchored. In the full match, both goals are found; the weakness is non-goal events and live latency.”
 
-## 7. Final three sentences to remember
+## 7. API-Football example (real feed)
+
+I used a real API-Football event feed for **LD Alajuelense 1–0 Perez Zeledon**, fixture `1551707`, 26 October 2026. The match is finished; this is a live-style feed, not a live broadcast.
+
+In the 85:00–90:00 window the API returned:
+
+- 89′ yellow card, Perez Zeledon (W. Fernandez)
+- 90′ yellow card, LD Alajuelense (E. Barley)
+- 90′ goal, LD Alajuelense (A. Hernandez), score 1–0
+
+I fed the goal as structured facts — team, player, minute, score — to the same GPT-2/validator/TTS stack. It produced:
+
+> “GOAL! LD Alajuelense make it count — sheer precision at a vital time!”
+
+The goal line is correct. The two cards were skipped because the current commentary label set has no card class. Generation was 45.3 s cold (includes loading GPT-2); TTS was 2.4 s; audio was 5.04 s. A deployed service would keep the model warm.
+
+**Oral sentence:** “The API-fed example gets the team and score right and removes perception entirely, but API-Football gives only major events — goals, cards, substitutions, VAR — not shots and corners. The video pipeline has richer events but the causal chunk got the side wrong. That is why a production system would use the API for event truth and video for enrichment.”
+
+The comparison is **system-level, not same-match**: the API match is Alajuelense–Perez Zeledon; the pre-recorded segment is ARG–FRA.
+
+**Cost:** the example used the free API-Football tier, so the API cost was **$0** for the requests made. A paid plan is excluded. The API is a subscription, not a per-match compute cost like the local/cloud rows.
+
+## 8. Final three sentences to remember
 
 1. “The language model never decides the facts; it only realises them.”
 2. “Goals are reliable because the score bug is a high-precision anchor; general event spotting is not.”

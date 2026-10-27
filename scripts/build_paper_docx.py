@@ -18,7 +18,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[2]
-OUT = ROOT / "docs" / "Matchcall_Paper_v2.docx"
+OUT = ROOT / "docs" / "Matchcall_Paper_v3.docx"
 FIG = ROOT / "docs" / "paper_figures"
 
 
@@ -637,7 +637,7 @@ BP("Result.", "GPT-2 is the better surface realiser: longer, more varied, closer
    "It is not the better fact layer. The validator raises precision but accepts 95% of lines, and "
    "in one record both the model and the template inherit a wrong team from the shared feature layer.")
 
-doc.add_heading("5.2 Live versus pre-recorded", level=2)
+doc.add_heading("5.2 Live-style versus pre-recorded", level=2)
 P("The full-context run is a batch job: it reads the whole match, detects events, writes lines and "
   "only then synthesises speech. The 5-minute chunk is processed with only that chunk as context and "
   "is therefore a closer analogue of a causal live system. Table 4 shows the difference. The full "
@@ -645,7 +645,9 @@ P("The full-context run is a batch job: it reads the whole match, detects events
   "attributes both to Argentina, while the score-bug anchors in the same run are away 44:33 and away "
   "45:42; it also produces an earlier goal at 2:01. The chunk is faster to first line (4.8 vs 16.6 "
   "minutes) but factually worse.")
-table_caption(4, "Full-context versus 5-minute causal chunk. Pink marks the wrong side; green marks "
+table_caption(4, "Pre-recorded full context, video-only 5-minute chunk, and a real API-Football "
+                 "event-feed example. The API row is a different match (Alajuelense–Perez Zeledon), "
+                 "so compare system behavior, not wording. Pink marks the wrong side; green marks "
                  "the correct side.")
 add_table(
     ["Mode", "First line", "Goal commentary", "Outcome"],
@@ -660,8 +662,22 @@ add_table(
           (" make it count — sheer precision at a vital time!\n[04:05] IT'S A GOAL! Clinical from ",
            None), ("Argentina", "bad"), (" — the keeper had no chance!", None)],
          [("wrong side", "bad"), ("; false early goal; faster", None)]],
+        ["API-fed example (different match)", "45.3 s cold + 2.4 s TTS",
+         [("GOAL! ", None), ("LD Alajuelense", "good"),
+          (" make it count — sheer precision at a vital time!", None)],
+         [("1/1 goal", "good"), ("; correct team/score; 2 cards skipped; different match", None)]],
     ],
     [1.35, 0.65, 3.15, 1.1], font_size=8.2)
+P("The API-fed row is a real API-Football event feed for LD Alajuelense 1–0 Perez Zeledon "
+  "(fixture 1551707, 26 October 2026). The match is finished; this is a live-style event feed, not a "
+  "live broadcast. In the 85:00–90:00 window the feed contains two yellow cards and a 90' goal by "
+  "A. Hernandez. The goal was fed as structured facts — team, player, minute and score 1–0 — and the "
+  "commentary candidate fell back to the grounded goal template; Fish voiced it in 2.4 s. The 45.3 s "
+  "generation figure is a cold start that includes loading GPT-2; a deployed service would keep the "
+  "model warm. The two cards are skipped because the current commentary label set has no card class. "
+  "This is a different match from ARG–FRA, so compare the system behavior, not the wording: the API "
+  "removes perception and gets the team and score right, but it supplies only major events; the video "
+  "pipeline supplies richer events, while the causal chunk got the side wrong.")
 add_figure(FIG / "fig3_latency.png", 3,
            "Latency to the first commentary line. The full-match run is faster than real time in "
            "aggregate (0.30×), but the first line appears only after the whole match is scored and "
@@ -741,27 +757,31 @@ add_figure(FIG / "fig7_gpt2.png", 8,
            "slow, noisy decline; the final loss is 0.779.", width=5.7)
 
 doc.add_heading("5.5 Cost", level=2)
-P("Table 7 reports the measured compute and an illustrative human baseline. A full match costs about "
-  "one cent of local electricity or $0.39 on a cloud A10G. Training both models for 3.64 hours costs "
-  "$0.109 locally or $4.40 at the cloud rate. The human scenarios are illustrative: a two-person team "
-  "at $50/h for three live hours or four pre-recorded hours costs $300 or $400. Across the "
-  "$25–$100/h range, cloud compute is roughly 400–1,500× cheaper. The caveat is that compute is not "
-  "the only cost: latency, quality review and paid TTS are excluded.")
+P("Table 7 reports the measured compute, the API-Football cost and an illustrative human baseline. A "
+  "full match costs about one cent of local electricity or $0.39 on a cloud A10G. Training both "
+  "models for 3.64 hours costs $0.109 locally or $4.40 at the cloud rate. The human scenarios are "
+  "illustrative: a two-person team at $50/h for three live hours or four pre-recorded hours costs "
+  "$300 or $400. Across the $25–$100/h range, cloud compute is roughly 400–1,500× cheaper. The API "
+  "example used the free API-Football tier, so the API cost was $0 for the requests made; paid plans "
+  "are excluded. The caveat is that compute is not the only cost: latency, quality review and paid "
+  "TTS are excluded.")
 table_caption(7, "Cost per 64.5-minute match. Local electricity and cloud rates are measured/assumed; "
-                 "human rates are illustrative, not quotes.")
+                 "API-Football was used on the free tier; human rates are illustrative, not quotes.")
 add_table(
-    ["Item", "Local RTX 2050", "Cloud g5.2xlarge", "Human team"],
+    ["Item", "Local RTX 2050", "Cloud g5.2xlarge", "API-Football", "Human team"],
     [
-        ["Inference", "$0.010", "$0.392", "$300 live / $400 pre-recorded"],
-        ["Training (both models)", "$0.109", "$4.40", "—"],
-        ["Training hours", "3.64 h", "3.64 h", "—"],
-        ["TTS calls / speech", "43 / 412.2 s", "43 / 412.2 s", "—"],
+        ["Inference", "$0.010", "$0.392", "—", "$300 live / $400 pre-recorded"],
+        ["Training (both models)", "$0.109", "$4.40", "—", "—"],
+        ["Training hours", "3.64 h", "3.64 h", "—", "—"],
+        ["TTS calls / speech", "43 / 412.2 s", "43 / 412.2 s", "—", "—"],
+        ["API feed", "—", "—", "$0 free tier; paid plan excluded", "—"],
     ],
-    [1.3, 1.4, 1.4, 2.1], font_size=8.5)
+    [1.15, 0.95, 0.95, 1.25, 1.45], font_size=8.2)
 add_figure(FIG / "fig8_cost.png", 9,
            "Cost per match minute on a log scale. The local and cloud points are two to three orders "
            "of magnitude below the human scenario; the barrier to deployment is quality and latency, "
-           "not compute.", width=6.0)
+           "not compute. The API-Football free tier used here is $0 and cannot be shown on a log "
+           "axis.", width=6.0)
 
 # ---------------------------------------------------------------- 6 discussion
 doc.add_heading("6. Discussion", level=1)
