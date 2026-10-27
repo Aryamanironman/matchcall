@@ -18,7 +18,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[2]
-OUT = ROOT / "docs" / "Matchcall_Paper.docx"
+OUT = ROOT / "docs" / "Matchcall_Paper_v2.docx"
 FIG = ROOT / "docs" / "paper_figures"
 
 
@@ -83,6 +83,7 @@ ref_style.paragraph_format.left_indent = Inches(0.32)
 ref_style.paragraph_format.first_line_indent = Inches(-0.32)
 ref_style.paragraph_format.space_after = Pt(2)
 ref_style.paragraph_format.line_spacing = 1.0
+ref_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
 # ---------------------------------------------------------------- helpers
 def shade(cell, fill):
@@ -220,6 +221,16 @@ def P(text, style=None):
     return p
 
 
+def left_para(text, size=9.5):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(4)
+    r = p.add_run(text)
+    r.font.name = "Times New Roman"
+    r.font.size = Pt(size)
+    return p
+
+
 def BP(lead, text):
     p = doc.add_paragraph()
     r = p.add_run(lead)
@@ -256,9 +267,11 @@ def horizontal_rule(p, color="A6B0A5", size="6"):
 
 def code_block(text):
     p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p.paragraph_format.left_indent = Inches(0.2)
     p.paragraph_format.space_before = Pt(4)
     p.paragraph_format.space_after = Pt(6)
+    p.paragraph_format.line_spacing = 1.0
     pPr = p._p.get_or_add_pPr()
     shd = OxmlElement("w:shd")
     shd.set(qn("w:val"), "clear")
@@ -374,11 +387,11 @@ P("A football broadcast is expensive to describe. A live commentator, a producer
   "coverage and lower its cost, but only if it is accurate enough to trust and cheap enough to run.")
 P("Three families of systems have been proposed. Rule-based and template systems such as MIKE "
   "separate fact selection from surface realisation and remain interpretable, but their language is "
-  "repetitive [11]. Neural captioning systems, including SoccerNet-Caption and MatchTime, learn "
+  "repetitive [6]. Neural captioning systems, including SoccerNet-Caption and MatchTime, learn "
   "from broadcast commentary and produce more varied text, but depend on large aligned corpora and "
-  "report overlap or alignment metrics rather than factuality [12], [13]. More recent multimodal "
+  "report overlap or alignment metrics rather than factuality [7], [8]. More recent multimodal "
   "LLMs such as TimeSoccer and SoccerComment consume full matches or retrieve external knowledge, "
-  "but they are heavy and do not expose an auditable fact layer [14], [15], [30]. Each family trades "
+  "but they are heavy and do not expose an auditable fact layer [9], [10]. Each family trades "
   "one desirable property for another.")
 P("This paper asks whether a deliberately small, modular system can occupy a different point in that "
   "trade-off. Matchcall keeps five stages separate: event spotting, tracking and team/possession "
@@ -406,50 +419,42 @@ doc.add_heading("2. Related Work", level=1)
 doc.add_heading("2.1 Action spotting and event understanding", level=2)
 P("SoccerNet defined action spotting as predicting the temporal location and class of sparse events "
   "in long broadcasts, with Average-mAP at multiple tolerances [1]. SoccerNet-v2 expanded the "
-  "taxonomy to seventeen classes and added camera-shot and replay annotations [2]. CALF models the "
-  "temporal context around sparse anchors [3], NetVLAD++ pools past and future context separately "
-  "[38], and E2E-Spot trains a compact end-to-end model on short clips [4]. The challenge reports "
-  "show steady progress, with tight Average-mAP reaching the low 70s in 2023 [5]; ASTRA is notable "
-  "for using audio to recognise non-visual actions [31]. The common lesson is that temporal "
+  "taxonomy to seventeen classes and added camera-shot and replay annotations [2]. Later work "
+  "improves temporal context and timestamp precision, but the common lesson is that temporal "
   "precision and a large, well-annotated corpus matter. Our system instead uses a broadcast-specific "
   "shortcut for goals — the score bug — and a lightweight window classifier for other events. The "
   "trade-off is lower coverage on rare classes, which we measure rather than assume away.")
 doc.add_heading("2.2 Detection, tracking, team identification and possession", level=2)
-P("YOLO established single-pass real-time detection [32]. ByteTrack associates low-score boxes to "
-  "recover occluded objects and is the tracker used here [6]. SportsMOT and SoccerNet-Tracking "
-  "expose the difficulty of sports footage: fast motion, similar appearances, occlusion and camera "
-  "cuts [7], [8]. Team identity and possession are semantic quantities that track IDs alone do not "
-  "provide. DeepPlayer-Track uses jersey-colour masks for team recognition [9], and Guo et al. "
-  "combine YOLOv8, DBSCAN jersey clustering and Norfair tracking for possession estimation on full "
-  "matches [10]. Standard tracking metrics include HOTA, MOTA and IDF1 [26], [35], [36]. Our "
-  "pipeline follows the label-free jersey-clustering approach and adds a bounded ball-interpolation "
-  "rule; the ball remains a weak point because its object-detection AP is low.")
+P("YOLO established single-pass real-time detection [21]. ByteTrack associates low-score boxes to "
+  "recover occluded objects and is the tracker used here [3]. Team identity and possession are "
+  "semantic quantities that track IDs alone do not provide. DeepPlayer-Track uses jersey-colour "
+  "masks for team recognition [4], and Guo et al. combine YOLOv8, DBSCAN jersey clustering and "
+  "Norfair tracking for possession estimation on full matches [5]. Our pipeline follows the "
+  "label-free jersey-clustering approach and adds a bounded ball-interpolation rule; the ball "
+  "remains a weak point because its object-detection AP is low.")
 doc.add_heading("2.3 From templates to neural and LLM commentary", level=2)
-P("MIKE used six analysers, importance-scored proposition selection and template generation [11]. "
+P("MIKE used six analysers, importance-scored proposition selection and template generation [6]. "
   "SoccerNet-Caption introduced dense captioning with almost 37,000 timestamped commentaries across "
-  "715.9 hours [12]. MatchTime showed that alignment quality is a first-order determinant of "
-  "generation quality and released an aligned dataset and the MatchVoice model [13]. TimeSoccer "
-  "consumes full 45-minute matches with frame compression [14], while SoccerComment combines "
-  "LanguageBind, Vicuna-7B and retrieval [15]. Ravuru documents the hardware limits of commentary "
-  "training and the effect of window size [30], and MatchVision/SoccerReplay-1988 provides a large "
-  "multi-modal corpus [34]. These systems are more fluent than templates but heavier; our work "
-  "tests a small GPT-2 with LoRA [16], [17] under a deterministic validator.")
+  "715.9 hours [7]. MatchTime showed that alignment quality is a first-order determinant of "
+  "generation quality and released an aligned dataset and the MatchVoice model [8]. TimeSoccer "
+  "consumes full 45-minute matches with frame compression [9], while SoccerComment combines "
+  "LanguageBind, Vicuna-7B and retrieval [10]. MatchVision/SoccerReplay-1988 provides a large "
+  "multi-modal corpus [23]. These systems are more fluent than templates but heavier; our work "
+  "tests a small GPT-2 with LoRA [11], [12] under a deterministic validator.")
 doc.add_heading("2.4 Grounding, hallucination and evaluation", level=2)
-P("Hallucination in natural-language generation is surveyed by Ji et al. [19]. FActScore "
-  "decomposes long-form text into atomic facts and checks each against a knowledge source [18]; "
-  "retrieval-augmented generation supplies evidence at generation time [20]. Football commentary "
-  "has no dedicated faithfulness benchmark. SoccerNet-Caption, MatchTime, TimeSoccer and "
-  "SoccerComment report captioning overlap or alignment; BLEU, ROUGE and METEOR measure similarity "
-  "to references, not truth [27]–[29]. Our validator is closer to atomic checking than to "
-  "retrieval-only grounding: it checks the generated line against the measured score, minute, team "
-  "and event before acceptance.")
+P("Hallucination in natural-language generation is surveyed by Ji et al. [14]. FActScore "
+  "decomposes long-form text into atomic facts and checks each against a knowledge source [13]. "
+  "Football commentary has no dedicated faithfulness benchmark. SoccerNet-Caption, MatchTime, "
+  "TimeSoccer and SoccerComment report captioning overlap or alignment; BLEU, ROUGE and METEOR "
+  "measure similarity to references, not truth [18]–[20]. Our validator is closer to atomic "
+  "checking than to retrieval-only grounding: it checks the generated line against the measured "
+  "score, minute, team and event before acceptance.")
 doc.add_heading("2.5 Speech synthesis and prosody", level=2)
-P("Tacotron 2 established neural TTS naturalness [21]; FastSpeech 2 added explicit duration, pitch "
-  "and energy control [22]; VITS combined a conditional VAE, flows and adversarial training [23]; "
-  "StyleTTS 2 added style diffusion [24]. Fish Audio's S1 family offers emotion and tone markers and "
-  "reports low real-time factors on high-end GPUs [25]. Sports-commentary prosody is not covered by "
-  "these benchmarks. We use a production TTS and map event intensity to pacing, but we do not claim "
-  "a sports-specific TTS evaluation.")
+P("Tacotron 2 established neural TTS naturalness [15]; FastSpeech 2 added explicit duration, pitch "
+  "and energy control [16]. Fish Audio's S1 family offers emotion and tone markers and reports low "
+  "real-time factors on high-end GPUs [17]. Sports-commentary prosody is not covered by these "
+  "benchmarks. We use a production TTS and map event intensity to pacing, but we do not claim a "
+  "sports-specific TTS evaluation.")
 doc.add_heading("2.6 Positioning", level=2)
 P("The literature is rich in perception benchmarks and increasingly rich in generative commentary, "
   "but sparse in systems that expose a deterministic fact layer, run the full broadcast-to-speech "
@@ -481,25 +486,25 @@ P("The event layer combines three signals. A score-bug reader samples the two sc
   "updates after the ball crosses the line.")
 doc.add_heading("3.3 Tracking, teams and facts", level=2)
 P("YOLO26n detects players, the ball and the referee in each scheduled frame; ByteTrack maintains "
-  "identities across frames [6], [32]. Jersey colours are clustered with KMeans into two teams, and "
+  "identities across frames [3], [21]. Jersey colours are clustered with KMeans into two teams, and "
   "possession is assigned to the side of the tracked player nearest the ball. Because broadcast cuts "
   "and close-ups break the ball path, raw detections are interpolated only across bounded gaps "
   "(16 frames), single-frame teleports are rejected, and predicted frames are marked. The output is "
   "a deterministic fact sheet: score, minute, ball zone, possession, tracked-player count and event "
   "team. No language model is allowed to add to this sheet.")
 doc.add_heading("3.4 Commentary and validation", level=2)
-P("GPT-2 v4 is a LoRA adapter [16] over GPT-2 [17], trained on team-grounded SoccerReplay "
-  "commentary [34]. The prompt supplies the event label, team, scoreline, minute, phase and measured "
+P("GPT-2 v4 is a LoRA adapter [11] over GPT-2 [12], trained on team-grounded SoccerReplay "
+  "commentary [23]. The prompt supplies the event label, team, scoreline, minute, phase and measured "
   "vision features. Candidate lines are cleaned and checked: the event team must appear, blocked "
   "team and player names are rejected, digits must match the fact sheet, and a goal line must "
   "contain a real goal phrase in its opening sentence and no contradiction such as “denied,” “wide” "
-  "or “saved.” If every candidate fails, the grounded template announcer is used [11]. The validator "
+  "or “saved.” If every candidate fails, the grounded template announcer is used [6]. The validator "
   "is intentionally conservative; it is a guard against invented facts, not a measure of fluency.")
 doc.add_heading("3.5 Speech, render and MLOps", level=2)
-P("Accepted lines are synthesised with Fish Audio s2.1-pro-free [25]. Event intensity controls "
+P("Accepted lines are synthesised with Fish Audio s2.1-pro-free [17]. Event intensity controls "
   "pacing, the voice is mixed under the original crowd at a low level, and ffmpeg renders the full "
   "match. Every YOLO and GPT-2 run is a ClearML task with parameters, per-epoch or per-step scalars, "
-  "plots, artifacts and a registered model [33]. The evaluation artifacts in this paper were "
+  "plots, artifacts and a registered model [22]. The evaluation artifacts in this paper were "
   "produced from the same logged runs.")
 
 # ---------------------------------------------------------------- 4 setup
@@ -510,10 +515,11 @@ P("All end-to-end results use a 64.5-minute, 1920×1080 recording of the Argenti
   "2–1 to 2–2. The event reference is the ten curated moments used by the earlier highlight reel: "
   "six shots, two tackles and two goals. This is a reference for recall/consistency, not an "
   "exhaustive independent annotation, so event precision is not measured. The commentary comparison "
-  "uses 40 held-out SoccerReplay prompts with human reference lines [34]. The live experiment uses a "
+  "uses 40 held-out SoccerReplay prompts with human reference lines [23]. The live experiment uses a "
   "5-minute chunk starting at 40:00 of the recording, processed with only that chunk as context. "
   "The object detector is trained on the Roboflow V1 football dataset (8,677 train / 2,996 "
-  "validation images, three classes: Player, Ball, Referee) [37].")
+  "validation images, three classes: Player, Ball, Referee) [24]. These are the only datasets used "
+  "for training in this paper; SoccerNet and other benchmarks appear only as related work.")
 doc.add_heading("4.2 Models and training", level=2)
 P("Table 1 summarises the trained components. YOLO26n was fine-tuned at 640 px for 50 epochs with "
   "batch 1 on the RTX 2050; the best checkpoint was the final epoch, with mAP50 0.806 and mAP50–95 "
@@ -533,7 +539,7 @@ add_table(
     ],
     [1.05, 2.2, 0.7, 1.25, 1.05], font_size=8.2)
 doc.add_heading("4.3 Metrics", level=2)
-P("Commentary is scored against human references with BLEU-1/2/4, ROUGE-L and METEOR [27]–[29], and "
+P("Commentary is scored against human references with BLEU-1/2/4, ROUGE-L and METEOR [18]–[20], and "
   "with validator acceptance and line length. Event spotting is scored as recall against the ten "
   "reference moments at ±1 minute, with goal precision/recall checked against the known 80' and 81' "
   "goals. Live operation is measured by wall time, wall-time ratio and time to first commentary "
@@ -817,6 +823,10 @@ doc.add_heading("References", level=1)
 paper_html = (ROOT / "docs" / "matchcall_paper.html").read_text(encoding="utf-8")
 refs = re.findall(r"<li>(.*?)</li>", paper_html, re.S)
 refs = [html.unescape(re.sub(r"<[^>]+>", "", r)).strip() for r in refs]
+# Keep only the sources this paper actually relies on, in citation order.
+REF_ORDER = [1, 2, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+             21, 22, 25, 27, 28, 29, 32, 33, 34, 37]
+refs = [refs[i - 1] for i in REF_ORDER]
 for i, r in enumerate(refs, 1):
     p = doc.add_paragraph(style="Paper Reference")
     p.add_run(f"[{i}] ").font.name = "Times New Roman"
@@ -825,15 +835,16 @@ for i, r in enumerate(refs, 1):
 # ---------------------------------------------------------------- appendix
 doc.add_page_break()
 doc.add_heading("Appendix A. Reproducibility", level=1)
-P("The main artifacts are produced by the following commands. The full-match job is 7c23a8a91829; "
-  "the corrected goal clip is 8cdba651f954; the 5-minute chunk is feebe1ed5d60.")
+left_para("The main artifacts are produced by the following commands. The full-match job is "
+          "7c23a8a91829; the corrected goal clip is 8cdba651f954; the 5-minute chunk is "
+          "feebe1ed5d60.", size=9.5)
 code_block("python scripts/compare_commentary.py --n 40 --device cuda\n"
            "python scripts/evaluate_event_spotting.py\n"
            "python scripts/compile_experiments.py")
-P("Data and outputs: output/comparison/commentary_comparison.json; output/experiments/"
-  "event_spotting.json; output/experiments/experiment_results.json; output/experiments/"
-  "full_match_job.json; output/experiments/chunk_job.json. Models: models/yolo26/"
-  "yolo26n_v1_640; models/gpt2_lora_v4. Commit 7f1a826.", style=None)
+left_para("Data and outputs: output/comparison/commentary_comparison.json; output/experiments/"
+          "event_spotting.json; output/experiments/experiment_results.json; output/experiments/"
+          "full_match_job.json; output/experiments/chunk_job.json. Models: models/yolo26/"
+          "yolo26n_v1_640; models/gpt2_lora_v4. Commit 7f1a826.", size=9.5)
 
 # ---------------------------------------------------------------- properties
 doc.core_properties.title = "Matchcall: A Fact-Grounded, Low-Cost Pipeline for Spoken Football Commentary"
