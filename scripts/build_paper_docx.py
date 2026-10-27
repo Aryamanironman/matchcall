@@ -18,7 +18,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[2]
-OUT = ROOT / "docs" / "Matchcall_Paper_v3.docx"
+OUT = ROOT / "docs" / "Matchcall_Paper_Final.docx"
 FIG = ROOT / "docs" / "paper_figures"
 
 
@@ -498,8 +498,11 @@ P("GPT-2 v4 is a LoRA adapter [11] over GPT-2 [12], trained on team-grounded Soc
   "vision features. Candidate lines are cleaned and checked: the event team must appear, blocked "
   "team and player names are rejected, digits must match the fact sheet, and a goal line must "
   "contain a real goal phrase in its opening sentence and no contradiction such as “denied,” “wide” "
-  "or “saved.” If every candidate fails, the grounded template announcer is used [6]. The validator "
-  "is intentionally conservative; it is a guard against invented facts, not a measure of fluency.")
+  "or “saved.” Goal candidates are prefilled with “GOAL! <team>”; the validator strips that prefix "
+  "and requires a goal action in the body. Blocked team names are suppressed in lowercase, "
+  "capitalised and uppercase forms during decoding. If every candidate fails, the grounded template "
+  "announcer is used [6]. The validator is intentionally conservative; it is a guard against "
+  "invented facts, not a measure of fluency.")
 doc.add_heading("3.5 Speech, render and MLOps", level=2)
 P("Accepted lines are synthesised with Fish Audio s2.1-pro-free [17]. Event intensity controls "
   "pacing, the voice is mixed under the original crowd at a low level, and ffmpeg renders the full "

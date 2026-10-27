@@ -172,6 +172,28 @@ The comparison is **system-level, not same-match**: the API match is Alajuelense
 
 **Cost:** the example used the free API-Football tier, so the API cost was **$0** for the requests made. A paid plan is excluded. The API is a subscription, not a per-match compute cost like the local/cloud rows.
 
+### Goal-generation fixes and retest
+
+Two cheap fixes were added:
+
+1. **Case-variant team suppression** during decoding. The original blocklist had `lyon`, but the model generated `Lyon` and slipped past it. Lowercase, capitalised and uppercase forms are now blocked.
+2. **Goal prefill + body check.** Goal generation is forced to start with `GOAL! <team>`; the validator strips that prefix and requires a real goal action in the body, so “GOAL! … a corner kick was cleared” is rejected.
+
+Retest results:
+
+- API goal, Alajuelense 90′: **template fell back** — the candidate described a corner/clearance and invented a player name.
+- ARG–FRA 80′: **GPT-2 accepted** — “GOAL! France … scores from long range …”
+- ARG–FRA 81′: **template fell back** — the candidate described a save/clearance.
+
+So the fixes remove the `Lyon` case and improve one ARG goal, but do not guarantee GPT-2 goal lines. The validator still protects the output.
+
+**Training change needed:** training more on the current corpus will not fix out-of-distribution team/player names. The corpus needs:
+- team names anonymised or replaced with placeholders, then substituted at inference;
+- player names included in the prompt and target when the fact sheet has them;
+- more leagues/team names, or an API-style `[EVENT] goal by <team>, scorer <player>` format.
+
+For a production goal call, template-first with the API scorer is the robust policy; GPT-2 is better used for colour and non-goal events.
+
 ## 8. Final three sentences to remember
 
 1. “The language model never decides the facts; it only realises them.”

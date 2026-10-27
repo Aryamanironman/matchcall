@@ -2,7 +2,7 @@
 
 Generated from measured artifacts. Cost assumptions are explicit and are not vendor quotes.
 
-**Research paper:** [`docs/Matchcall_Paper_v3.docx`](Matchcall_Paper_v3.docx)  
+**Research paper:** [`docs/Matchcall_Paper_Final.docx`](Matchcall_Paper_Final.docx)  
 **Visual summary:** [`docs/matchcall_experiments.html`](matchcall_experiments.html) · **PDF:** [`docs/Matchcall_Experiments.pdf`](Matchcall_Experiments.pdf)
 
 ## 1. AI vs human commentary
