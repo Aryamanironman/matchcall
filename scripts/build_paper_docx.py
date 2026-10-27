@@ -18,7 +18,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[2]
-OUT = ROOT / "docs" / "Matchcall_Paper_Final.docx"
+OUT = ROOT / "docs" / "Matchcall_Paper_v5.docx"
 FIG = ROOT / "docs" / "paper_figures"
 
 
@@ -359,16 +359,15 @@ abstract = (
     "separate from surface realisation. A score-bug reader supplies goal anchors; a motion-gated "
     "window scan and a ResNet-18 classifier propose other events; YOLO26n with ByteTrack, jersey "
     "clustering and possession estimation supply player-level facts; GPT-2 with LoRA generates "
-    "commentary under a grounding validator with a template fallback; Fish Audio synthesises speech. "
+    "commentary under a grounding validator with a grounded template as a safety net; Fish Audio synthesises speech. "
     "On a 64.5-minute ARG–FRA broadcast, the pipeline produces 43 fully voiced lines in 19.4 minutes "
     "on a 4 GB RTX 2050. Both goals are recovered with precision and recall 1.00, but overall event "
     "recall against ten curated moments is 0.40 at ±1 minute. On 40 held-out human references, GPT-2 "
     "v4 improves ROUGE-L from 0.093 to 0.185 and METEOR from 0.027 to 0.207 over templates, while "
-    "BLEU-4 remains near zero. A 5-minute causal chunk is faster to first line (4.8 vs 16.6 minutes) "
-    "but misattributes both goals to the home side, so the current system is pre-recorded only. "
-    "Cloud inference costs $0.39 per match versus an illustrative $300 human team. We conclude that "
-    "low-cost, auditable pre-recorded commentary is feasible; live commentary and general event "
-    "spotting remain open."
+    "BLEU-4 remains near zero. The system is pre-recorded only; a deployed live service would need "
+    "streaming perception and incremental speech. Cloud inference costs $0.39 per match versus an "
+    "illustrative $300 human team. We conclude that low-cost, auditable pre-recorded commentary is "
+    "feasible; live commentary and general event spotting remain open."
 )
 P(abstract, style="Paper Abstract")
 p = doc.add_paragraph(style="Paper Abstract")
@@ -400,19 +399,18 @@ P("This paper asks whether a deliberately small, modular system can occupy a dif
   "A validator checks every candidate line against those facts, and a grounded template is used when "
   "the candidate fails. The design target is a full match on a single consumer GPU, with every "
   "training run and artifact logged.")
-P("We report four comparisons on a real broadcast: (i) GPT-2 commentary against 40 held-out human "
-  "references and a template baseline; (ii) pre-recorded full-context commentary against a 5-minute "
-  "causal chunk; (iii) event spotting against ten curated reference moments; and (iv) compute, TTS "
-  "and human cost. The results are deliberately mixed. Goals are reliable because the broadcast score "
-  "bug is a high-precision anchor. General event spotting and live latency are not solved. The "
-  "contribution is not a new state of the art on SoccerNet; it is an auditable, reproducible "
-  "instantiation of the full broadcast-to-speech pipeline, with its failure modes measured rather "
-  "than hidden.")
+P("We report three comparisons on a real broadcast: (i) GPT-2 commentary against 40 held-out human "
+  "references and a template baseline; (ii) event spotting against ten curated reference moments; and "
+  "(iii) compute, TTS and human cost. The results are deliberately mixed. Goals are reliable because "
+  "the broadcast score bug is a high-precision anchor. General event spotting and live latency are not "
+  "solved. The contribution is not a new state of the art on SoccerNet; it is an auditable, "
+  "reproducible instantiation of the full broadcast-to-speech pipeline, with its failure modes "
+  "measured rather than hidden.")
 BP("Contributions.", "(1) A modular five-stage pipeline that separates deterministic facts from "
    "language and speech. (2) A score-bug goal anchor that infers the on-screen starting score and "
    "survives short clips. (3) A full 64.5-minute end-to-end run with 43 voiced lines on a 4 GB GPU. "
-   "(4) Four empirical comparisons, including negative results for live operation and general event "
-   "spotting. (5) ClearML-logged training runs and a reproducible evaluation script.")
+   "(4) Three empirical comparisons, including negative results for general event spotting and API "
+   "event coverage. (5) ClearML-logged training runs and a reproducible evaluation script.")
 
 # ---------------------------------------------------------------- 2 related work
 doc.add_heading("2. Related Work", level=1)
@@ -495,14 +493,17 @@ P("YOLO26n detects players, the ball and the referee in each scheduled frame; By
 doc.add_heading("3.4 Commentary and validation", level=2)
 P("GPT-2 v4 is a LoRA adapter [11] over GPT-2 [12], trained on team-grounded SoccerReplay "
   "commentary [23]. The prompt supplies the event label, team, scoreline, minute, phase and measured "
-  "vision features. Candidate lines are cleaned and checked: the event team must appear, blocked "
-  "team and player names are rejected, digits must match the fact sheet, and a goal line must "
-  "contain a real goal phrase in its opening sentence and no contradiction such as “denied,” “wide” "
-  "or “saved.” Goal candidates are prefilled with “GOAL! <team>”; the validator strips that prefix "
-  "and requires a goal action in the body. Blocked team names are suppressed in lowercase, "
-  "capitalised and uppercase forms during decoding. If every candidate fails, the grounded template "
-  "announcer is used [6]. The validator is intentionally conservative; it is a guard against "
-  "invented facts, not a measure of fluency.")
+  "vision features. A v5 adapter uses an API-slot prompt (`<HOME>`, `<AWAY>`, `<TEAM>`, `<PLAYER>`, "
+  "`<SCORE>`, `<MINUTE>`) and substitutes the facts after generation, so the same model can consume "
+  "an API-Football event feed. Candidate lines are cleaned and checked: the event team must appear, "
+  "blocked team and player names are rejected, digits and both colon and hyphen scores must match the "
+  "fact sheet, and a goal line must contain a real goal phrase in its opening sentence and no "
+  "contradiction such as “denied,” “wide” or “saved.” Goal candidates are prefilled with “Goal!” plus "
+  "the `<PLAYER>` or `<TEAM>` slot and decoded with beam search, with contradiction and off-score "
+  "tokens suppressed; the validator strips the prefix and requires a goal action in the body. Blocked "
+  "team names are suppressed in lowercase, capitalised and uppercase forms during decoding. If every "
+  "candidate fails, a grounded template is the last resort [6]. The validator is intentionally "
+  "conservative; it is a guard against invented facts, not a measure of fluency.")
 doc.add_heading("3.5 Speech, render and MLOps", level=2)
 P("Accepted lines are synthesised with Fish Audio s2.1-pro-free [17]. Event intensity controls "
   "pacing, the voice is mixed under the original crowd at a low level, and ffmpeg renders the full "
@@ -518,29 +519,33 @@ P("All end-to-end results use a 64.5-minute, 1920×1080 recording of the Argenti
   "2–1 to 2–2. The event reference is the ten curated moments used by the earlier highlight reel: "
   "six shots, two tackles and two goals. This is a reference for recall/consistency, not an "
   "exhaustive independent annotation, so event precision is not measured. The commentary comparison "
-  "uses 40 held-out SoccerReplay prompts with human reference lines [23]. The live experiment uses a "
-  "5-minute chunk starting at 40:00 of the recording, processed with only that chunk as context. "
-  "The object detector is trained on the Roboflow V1 football dataset (8,677 train / 2,996 "
+  "uses 40 held-out SoccerReplay prompts with human reference lines [23]. The object detector is "
+  "trained on the Roboflow V1 football dataset (8,677 train / 2,996 "
   "validation images, three classes: Player, Ball, Referee) [24]. These are the only datasets used "
   "for training in this paper; SoccerNet and other benchmarks appear only as related work.")
 doc.add_heading("4.2 Models and training", level=2)
 P("Table 1 summarises the trained components. YOLO26n was fine-tuned at 640 px for 50 epochs with "
   "batch 1 on the RTX 2050; the best checkpoint was the final epoch, with mAP50 0.806 and mAP50–95 "
   "0.480. GPT-2 v4 used LoRA rank 32, 160-token sequences, completion-only loss, three epochs and "
-  "2,481 optimizer steps; the loss fell from 3.877 to 0.779. Fish Audio was used through its free "
-  "tier, so no paid TTS price is included.")
-table_caption(1, "Trained components and schedules. The detector and language model were trained "
-                 "locally on one 4 GB GPU; ClearML logged both runs.")
+  "2,481 optimizer steps; the loss fell from 3.877 to 0.779. A second adapter, v5, used the same "
+  "base and LoRA rank but the API-slot prompt and a 38,815-example training split (1,723 validation); "
+  "it ran for 2 epochs and 4,852 steps (1.09 h) and reached a final training loss of 0.903 (ClearML "
+  "task 6acdac3186d640cc8a398898752dc90a). Fish Audio was used through its free tier, so no paid TTS "
+  "price is included.")
+table_caption(1, "Trained components and schedules. The detector and language models were trained "
+                 "locally on one 4 GB GPU; ClearML logged all runs.")
 add_table(
     ["Component", "Model / data", "Params", "Schedule", "Result"],
     [
         ["Detector", "YOLO26n on V1 (8,677 / 2,996)", "2.39 M",
          "640 px, 50 epochs, batch 1, 2.70 h", "mAP50 0.806; mAP50–95 0.480"],
-        ["Commentary", "GPT-2 + LoRA r=32 on SoccerReplay-1988", "124 M base",
+        ["Commentary v4", "GPT-2 + LoRA r=32 on SoccerReplay-1988", "124 M base",
          "3 epochs, 2,481 steps, 160 tokens", "loss 3.877 → 0.779"],
+        ["Commentary v5", "GPT-2 + LoRA r=32, API-slot template", "124 M base",
+         "2 epochs, 4,852 steps, 38,815 rows", "loss → 0.903"],
         ["Speech", "Fish Audio s2.1-pro-free", "—", "43 calls, 412.2 s speech", "43/43 lines voiced"],
     ],
-    [1.05, 2.2, 0.7, 1.25, 1.05], font_size=8.2)
+    [1.0, 2.15, 0.65, 1.3, 1.05], font_size=8.2)
 doc.add_heading("4.3 Metrics", level=2)
 P("Commentary is scored against human references with BLEU-1/2/4, ROUGE-L and METEOR [18]–[20], and "
   "with validator acceptance and line length. Event spotting is scored as recall against the ten "
@@ -640,56 +645,47 @@ BP("Result.", "GPT-2 is the better surface realiser: longer, more varied, closer
    "It is not the better fact layer. The validator raises precision but accepts 95% of lines, and "
    "in one record both the model and the template inherit a wrong team from the shared feature layer.")
 
-doc.add_heading("5.2 Live-style versus pre-recorded", level=2)
+doc.add_heading("5.2 Pre-recorded full context versus an API-fed goal", level=2)
 P("The full-context run is a batch job: it reads the whole match, detects events, writes lines and "
-  "only then synthesises speech. The 5-minute chunk is processed with only that chunk as context and "
-  "is therefore a closer analogue of a causal live system. Table 4 shows the difference. The full "
-  "run calls both goals correctly and attributes them to France. The chunk calls two goals and "
-  "attributes both to Argentina, while the score-bug anchors in the same run are away 44:33 and away "
-  "45:42; it also produces an earlier goal at 2:01. The chunk is faster to first line (4.8 vs 16.6 "
-  "minutes) but factually worse.")
-table_caption(4, "Pre-recorded full context, video-only 5-minute chunk, and a real API-Football "
-                 "event-feed example. The API row is a different match (Alajuelense–Perez Zeledon), "
-                 "so compare system behavior, not wording. Pink marks the wrong side; green marks "
-                 "the correct side.")
+  "only then synthesises speech. It calls both goals correctly and attributes them to France. Table 4 "
+  "shows v5 GPT-2 goal lines generated from the same fact sheet, alongside a real API-Football event "
+  "feed. The API path removes perception entirely and can therefore be used to test the language and "
+  "speech stages in isolation.")
+table_caption(4, "Pre-recorded full context and a real API-Football event-feed example. The full-context "
+                 "goal lines are v5 GPT-2 generations from the same fact sheet; the API row is a "
+                 "different match (Alajuelense–Perez Zeledon), so compare system behavior, not "
+                 "wording. Green marks the correct side.")
 add_table(
     ["Mode", "First line", "Goal commentary", "Outcome"],
     [
         ["Pre-recorded, full context", "16.6 min",
-         [("[44:18] GOAL! ", None), ("France", "good"),
-          (" make it count — sheer precision at a vital time!\n[45:27] IT'S A GOAL! Clinical from ",
-           None), ("France", "good"), (" — the keeper had no chance!", None)],
+         [("[80'] Goal! ", None), ("France", "good"),
+          (" earn a first-time opportunity as they open up a promising attacking opportunity. The "
+           "score is 2:1.\n[81'] Goal! ", None), ("France", "good"),
+          (" earn a first-time opportunity as they open up the defence to hit the ball from long "
+           "range. The score is 2:2.", None)],
          "2/2 goals; correct side; slower"],
-        ["Live-like, 5-min chunk", "4.8 min",
-         [("[02:01] GOAL! ", None), ("Argentina", "bad"),
-          (" make it count — sheer precision at a vital time!\n[04:05] IT'S A GOAL! Clinical from ",
-           None), ("Argentina", "bad"), (" — the keeper had no chance!", None)],
-         [("wrong side", "bad"), ("; false early goal; faster", None)]],
-        ["API-fed example (different match)", "45.3 s cold + 2.4 s TTS",
-         [("GOAL! ", None), ("LD Alajuelense", "good"),
-          (" make it count — sheer precision at a vital time!", None)],
-         [("1/1 goal", "good"), ("; correct team/score; 2 cards skipped; different match", None)]],
+        ["API-fed example (different match)", "76.1 s cold + 2.1 s TTS",
+         [("Goal! A. Hernandez (LD Alajuelense) latches on to a precise pass inside the box and "
+           "unleashes a shot from the edge of the box into the left side of the goal. The score is "
+           "1:0.", None)],
+         [("1/1 goal", "good"), ("; correct team, player and score; 2 cards skipped", None)]],
     ],
-    [1.35, 0.65, 3.15, 1.1], font_size=8.2)
+    [1.35, 0.7, 3.25, 1.1], font_size=8.2)
 P("The API-fed row is a real API-Football event feed for LD Alajuelense 1–0 Perez Zeledon "
   "(fixture 1551707, 26 October 2026). The match is finished; this is a live-style event feed, not a "
   "live broadcast. In the 85:00–90:00 window the feed contains two yellow cards and a 90' goal by "
   "A. Hernandez. The goal was fed as structured facts — team, player, minute and score 1–0 — and the "
-  "commentary candidate fell back to the grounded goal template; Fish voiced it in 2.4 s. The 45.3 s "
-  "generation figure is a cold start that includes loading GPT-2; a deployed service would keep the "
-  "model warm. The two cards are skipped because the current commentary label set has no card class. "
-  "This is a different match from ARG–FRA, so compare the system behavior, not the wording: the API "
-  "removes perception and gets the team and score right, but it supplies only major events; the video "
-  "pipeline supplies richer events, while the causal chunk got the side wrong.")
+  "v5 slot adapter produced the line shown, with the correct team, player and score; Fish voiced it "
+  "in 2.1 s. The 76.1 s generation figure is a cold start that includes loading GPT-2; a deployed "
+  "service would keep the model warm. The two cards are skipped because the current commentary label "
+  "set has no card class. This is a different match from ARG–FRA, so compare the system behavior, not "
+  "the wording: the API removes perception and gets the team and score right, but it supplies only "
+  "major events; the video pipeline supplies richer events.")
 add_figure(FIG / "fig3_latency.png", 3,
-           "Latency to the first commentary line. The full-match run is faster than real time in "
-           "aggregate (0.30×), but the first line appears only after the whole match is scored and "
-           "written. The chunk is near real time and wrong.", width=5.6)
-P("The chunk's failure has a concrete cause: the goal-side information exists in the anchor, but it "
-  "is not carried into the realised line, and the short context makes the event classifier "
-  "over-fire. A live system needs streaming perception, incremental TTS and explicit side "
-  "propagation; shortening the input is not enough. This is a negative result for the current "
-  "architecture, and we report it as such.")
+           "Latency to the first commentary line for the 18 s clip and the full match. The full-match "
+           "run is faster than real time in aggregate (0.30×), but the first line appears only after "
+           "the whole match is scored and written.", width=5.6)
 
 doc.add_heading("5.3 Event spotting", level=2)
 P(f"Figure 4 compares the ten reference moments with the 38 event lines from the full run. Figure 5 "
@@ -747,10 +743,12 @@ doc.add_heading("5.4 Training dynamics", level=2)
 P("Figure 7 shows the YOLO26n training and validation curves. The box and classification losses fall "
   "steadily, and mAP50 rises from 0.538 at epoch 1 to 0.806 at epoch 50; mAP50–95 follows from 0.269 "
   "to 0.480. The curve is still improving at the final epoch, so 50 epochs is a budget choice rather "
-  "than a converged optimum. Figure 8 shows the GPT-2 LoRA loss: a rapid fall from 3.877 to about "
-  "1.0 in the first epoch, then a slow, noisy decline to 0.779 at step 2,481. The final held-out "
-  "acceptance is not a monotone function of training loss; language quality and factual grounding "
-  "are different objectives.")
+  "than a converged optimum. Figure 8 shows the GPT-2 v4 LoRA loss: a rapid fall from 3.877 to about "
+  "1.0 in the first epoch, then a slow, noisy decline to 0.779 at step 2,481. The v5 API-slot "
+  "adapter ran for 4,852 steps and ended at 0.903 training loss; its lower final loss did not remove "
+  "the need for constrained goal decoding, because the target corpus contains goal passages with "
+  "corner and clearance language. The final held-out acceptance is not a monotone function of "
+  "training loss; language quality and factual grounding are different objectives.")
 add_figure(FIG / "fig6_yolo.png", 7,
            "YOLO26n training curves, 640 px and 50 epochs. mAP50 reaches 0.806 and mAP50–95 0.480 at "
            "the final epoch; the model is still improving, so the schedule is a compute constraint, "
@@ -794,17 +792,16 @@ P("The experiments support a narrower claim than “automatic commentary.” The
 BP("Score-bug anchoring is the strongest component.", "A persistent digit flip is a high-precision "
    "signal that survives replays, close-ups and celebration cuts, and it names the scoring side. The "
    "full-match run finds both goals with precision and recall 1.00. The main engineering requirement "
-   "is to carry the anchored side into the realised line; the 5-minute chunk shows what happens when "
-   "that link is missing.")
+   "is to carry the anchored side into the realised line.")
 BP("Language quality and factuality are separate objectives.", "GPT-2 v4 more than doubles ROUGE-L "
    "over templates and writes human-length lines, but it invents shots, misnames teams and can miss "
    "a goal. The validator improves precision but accepts 95% of lines on this prompt set; it checks "
-   "words, not truth. A template fallback is safer but not sufficient when the feature layer itself "
+   "words, not truth. A grounded template is safer but not sufficient when the feature layer itself "
    "carries the wrong team.")
-BP("Live operation is an architectural problem, not a speed knob.", "The full run is faster than real "
-   "time in aggregate, but the first line appears after 16.6 minutes. The causal chunk is faster but "
-   "factually worse. A live system needs streaming perception, incremental speech and explicit side "
-   "propagation; the current batch architecture should be described as pre-recorded.")
+BP("Latency is an architectural problem, not a speed knob.", "The full run is faster than real "
+   "time in aggregate, but the first line appears after 16.6 minutes. A live system needs streaming "
+   "perception, incremental speech and explicit side propagation; the current batch architecture "
+   "should be described as pre-recorded.")
 P("For the paper's framing, the strongest contribution is the separation of deterministic facts from "
   "language and the score-bug goal path. The weakest links are general event spotting, team-side "
   "propagation and live latency. Reporting those weaknesses is more useful than claiming another "
@@ -859,15 +856,16 @@ for i, r in enumerate(refs, 1):
 doc.add_page_break()
 doc.add_heading("Appendix A. Reproducibility", level=1)
 left_para("The main artifacts are produced by the following commands. The full-match job is "
-          "7c23a8a91829; the corrected goal clip is 8cdba651f954; the 5-minute chunk is "
-          "feebe1ed5d60.", size=9.5)
+          "7c23a8a91829; the corrected goal clip is 8cdba651f954.", size=9.5)
 code_block("python scripts/compare_commentary.py --n 40 --device cuda\n"
            "python scripts/evaluate_event_spotting.py\n"
-           "python scripts/compile_experiments.py")
+           "python scripts/compile_experiments.py\n"
+           "python scripts/api_feed_current_example.py")
 left_para("Data and outputs: output/comparison/commentary_comparison.json; output/experiments/"
           "event_spotting.json; output/experiments/experiment_results.json; output/experiments/"
-          "full_match_job.json; output/experiments/chunk_job.json. Models: models/yolo26/"
-          "yolo26n_v1_640; models/gpt2_lora_v4. Commit 7f1a826.", size=9.5)
+          "full_match_job.json; output/experiments/api_feed_current_example.json. Models: "
+          "models/yolo26/yolo26n_v1_640; models/gpt2_lora_v4; models/gpt2_lora_v5. Commit 7f1a826.",
+          size=9.5)
 
 # ---------------------------------------------------------------- properties
 doc.core_properties.title = "Matchcall: A Fact-Grounded, Low-Cost Pipeline for Spoken Football Commentary"

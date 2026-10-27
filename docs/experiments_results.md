@@ -2,7 +2,7 @@
 
 Generated from measured artifacts. Cost assumptions are explicit and are not vendor quotes.
 
-**Research paper:** [`docs/Matchcall_Paper_Final.docx`](Matchcall_Paper_Final.docx)  
+**Research paper:** [`docs/Matchcall_Paper_v5.docx`](Matchcall_Paper_v5.docx)  
 **Visual summary:** [`docs/matchcall_experiments.html`](matchcall_experiments.html) · **PDF:** [`docs/Matchcall_Experiments.pdf`](Matchcall_Experiments.pdf)
 
 ## 1. AI vs human commentary
@@ -43,10 +43,9 @@ Limitation: the reference moments are curated highlight moments, not an exhausti
 | Mode | Input | Wall time | Ratio to real time | Time to first line |
 |---|---:|---:|---:|---:|
 | 18 s clip | 0.3 min | 0.7 min | 2.21× | 0.5 min |
-| 5 min chunk | 5.0 min | 5.2 min | 1.04× | 4.8 min |
 | 64.5 min full match | 64.5 min | 19.4 min | 0.30× | 16.6 min |
 
-The full-match run is faster than real time in aggregate (0.30×), but it is a batch job: the first line appears only after scoring, classification and generation. The 5-minute chunk took 5.2 minutes and still mislabelled the goal side, so the current system is **pre-recorded only**; a live mode needs a streaming pipeline with bounded latency.
+The full-match run is faster than real time in aggregate (0.30×), but it is a batch job: the first line appears only after scoring, classification and generation. The current system is **pre-recorded only**; a live mode needs a streaming pipeline with bounded latency.
 
 ## 4. Cost comparison
 

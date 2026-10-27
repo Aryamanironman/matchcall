@@ -22,6 +22,8 @@ work/
 data/soccerreplay/
 data/commentator_train_v4.jsonl
 data/commentator_valid_v4.jsonl
+data/commentator_train_v5.jsonl
+data/commentator_valid_v5.jsonl
 
 # private SageMaker notebook and local ClearML config - never commit
 training/aws/*private*.ipynb

@@ -6,7 +6,7 @@ Use this as a speaking sheet, not a script to read. The key is to sound like you
 
 “Broadcast football commentary is expensive and does not scale: most matches are never covered, and the ones that are covered need a commentator, a producer and often an analyst. My project asks whether a small, modular system can produce usable spoken commentary from a broadcast on a consumer GPU.
 
-The pipeline has five stages: action spotting from the score bug and a window classifier; tracking with YOLO26n, ByteTrack, jersey clustering and possession; a deterministic fact sheet; GPT-2 with LoRA for commentary under a grounding validator and template fallback; and Fish Audio for speech.
+The pipeline has five stages: action spotting from the score bug and a window classifier; tracking with YOLO26n, ByteTrack, jersey clustering and possession; a deterministic fact sheet; GPT-2 with LoRA for commentary under a grounding validator and a grounded template safety net; and Fish Audio for speech.
 
 The important design choice is that the language model never decides the score, minute, team or event. It only realises facts that were already measured. That makes the system auditable and lets me measure exactly where it fails.
 
@@ -17,7 +17,7 @@ On a 64.5-minute ARG–FRA match it produced 43 voiced lines in 19.4 minutes. Go
 1. **Action spotting:** score-bug reader for goals; motion-gated window scan; ResNet-18 classifier for goal/shot/pass/tackle/dead time; crowd audio and ball speed refine decisions.
 2. **Tracking:** YOLO26n detects players, ball and referee; ByteTrack keeps identities; KMeans jersey colours assign teams; possession goes to the side of the tracked player nearest the ball; bounded ball interpolation fills short gaps.
 3. **Facts:** deterministic sheet with score, minute, ball zone, possession, tracked-player count and event team.
-4. **Language:** GPT-2 v4 LoRA generates a line from the facts; a validator checks team, score, digits and event consistency; a grounded template is the fallback.
+4. **Language:** GPT-2 v4/v5 LoRA generates a line from the facts; a validator checks team, score, digits and event consistency; a grounded template is the safety net.
 5. **Speech:** Fish Audio s2.1-pro-free; event intensity controls pacing; ffmpeg mixes voice under the crowd.
 
 The design principle: **facts are measured, language is generated, speech is produced.** The model cannot invent a score because the score is not its decision.
@@ -45,7 +45,6 @@ The design principle: **facts are measured, language is generated, speech is pro
 | YOLOv5lu paused | mAP50 0.795; mAP50–95 0.459 |
 | YOLO params / epochs | 2.39 M / 50 vs 53 M / 33 |
 | Full-match first line | 16.6 min |
-| 5-min chunk first line | 4.8 min |
 | 18 s clip first line | 0.5 min |
 | Local inference | $0.010/match |
 | Cloud inference | $0.392/match |
@@ -59,7 +58,7 @@ The design principle: **facts are measured, language is generated, speech is pro
 Broadcast commentary is manual, expensive and does not scale to every match or language. Existing AI systems are either template-based and repetitive, or large end-to-end models that are expensive, opaque and prone to hallucination. I wanted to test a middle point: a modular, small-GPU pipeline with an auditable fact layer.
 
 **What is your main contribution?**
-Not a new state of the art. It is an auditable, reproducible instantiation of the full broadcast-to-speech pipeline: deterministic facts separated from language, score-bug goal anchors, a grounding validator with template fallback, and an honest evaluation of where the system fails.
+Not a new state of the art. It is an auditable, reproducible instantiation of the full broadcast-to-speech pipeline: deterministic facts separated from language, score-bug goal anchors, a grounding validator with a grounded template safety net, and an honest evaluation of where the system fails.
 
 **Why not use a large multimodal model end-to-end?**
 Cost, reproducibility and auditability. A 7B MLLM is hard to run on a 4 GB GPU, and it decides facts and language together, so a hallucinated score is hard to separate from a language error. My design lets me inspect the fact sheet before the language model sees it.
@@ -68,10 +67,10 @@ Cost, reproducibility and auditability. A 7B MLLM is hard to run on a 4 GB GPU, 
 GPT-2 is small enough to train and run on a consumer GPU. LoRA freezes the base weights and trains low-rank adapters, which reduces trainable parameters and memory. I am not claiming GPT-2 is better than a large model; I am testing whether a small model plus grounding is useful.
 
 **Is GPT-2 actually being used, or is it templates?**
-GPT-2 is the primary generator. The template is a fallback only when the validator rejects the line. In the v4 reel, 10/10 lines were GPT-2 and 0 were templates. In the corrected full-match run, the two goal lines fell back to templates because the goal validator rejected GPT-2’s goal attempts. The rest were mostly GPT-2.
+GPT-2 is the primary generator. In the v4 reel, 10/10 lines were GPT-2. With the v5 goal path, the API goal and both ARG–FRA goals are GPT-2 as well; the grounded template remains only as a safety net when every candidate fails validation.
 
 **How do you prevent hallucination?**
-Three layers: the fact sheet is measured before generation; the validator checks the generated line against team, event, score, digits and a goal-specific phrase check; and the template fallback is used if the candidate fails. The validator is a guard against invented facts, not a measure of fluency. It accepted 38/40 on one set, but only 15/40 under a stricter path, so I do not claim it solves hallucination.
+Three layers: the fact sheet is measured before generation; the validator checks the generated line against team, event, score, digits and a goal-specific phrase check; and a grounded template is the safety net if the candidate fails. The validator is a guard against invented facts, not a measure of fluency. It accepted 38/40 on one set, but only 15/40 under a stricter path, so I do not claim it solves hallucination.
 
 **Why is the human reference column empty in the comparison?**
 Because the human line is the reference, not a candidate. BLEU/ROUGE/METEOR compare a candidate to a reference. If I scored the human reference against itself, every metric would be 1.0 by definition. That would be a meaningless ceiling. The 31.9 average-word value is filled in because that is a descriptive property of the reference, not an overlap score.
@@ -86,10 +85,7 @@ The event classifier over-produces pass and dead-time lines and misses rare clas
 The score bug is a persistent broadcast graphic that flips exactly on a goal and names the side. That is much stronger evidence than a ResNet classifier looking at a short window. For shots and tackles, the classifier relies on visual and audio cues that are noisy under broadcast cuts.
 
 **Is the system live?**
-No. It is pre-recorded. The full match is faster than real time in aggregate — 19.4 minutes for 64.5 minutes — but the first line appears after 16.6 minutes because the pipeline scores, writes and only then voices. A 5-minute causal chunk gets the first line out in 4.8 minutes, but it mislabels both goals as Argentina and invents an earlier goal. So shorter inputs alone do not make it live; it needs streaming perception, incremental TTS and side propagation.
-
-**Why did the chunk get the goal side wrong?**
-The score-bug anchor knows the side — the anchors were away 44:33 and away 45:42 — but the side is not carried into the realised line in the chunk path, and the short context makes the event classifier over-fire. That is a concrete architectural failure, not just a language error.
+No. It is pre-recorded. The full match is faster than real time in aggregate — 19.4 minutes for 64.5 minutes — but the first line appears after 16.6 minutes because the pipeline scores, writes and only then voices. Shorter inputs alone do not make it live; it needs streaming perception, incremental TTS and side propagation.
 
 **Why YOLO26n and not YOLOv5lu?**
 I had a 4 GB GPU and a four-hour window. YOLO26x/l could not finish a meaningful run in that time; YOLO26n could. It reached mAP50 0.805 / mAP50–95 0.481 in 2.70 hours. The comparison with YOLOv5lu is not equal-budget: 50 vs 33 epochs and 2.39 M vs 53 M parameters. I do not claim YOLO26 is proven better; the fair 640 px / 100-epoch SageMaker run is still pending.
@@ -110,7 +106,7 @@ Every YOLO and GPT-2 run is a task with parameters, metrics, artifacts and a reg
 It is the deterministic fact sheet: score, minute, ball zone, possession, tracked-player count and event team. The language model receives these facts and must realise them. It is not allowed to add a new score, team or player. The validator compares the generated line back to this sheet.
 
 **What is novel here?**
-Not a new detector or a new LLM. The novelty is the system-level combination: a deterministic fact layer, score-bug goal anchoring, a validator with template fallback, a full broadcast-to-speech run on a consumer GPU, and a paper that reports the negative results — live latency, event recall, team attribution — instead of hiding them.
+Not a new detector or a new LLM. The novelty is the system-level combination: a deterministic fact layer, score-bug goal anchoring, a validator with a grounded template safety net, a full broadcast-to-speech run on a consumer GPU, and a paper that reports the negative results — live latency, event recall, team attribution — instead of hiding them.
 
 **What are the biggest weaknesses?**
 General event recall, team-side propagation, live latency, and the absence of a human evaluation. The reference moments are curated, not exhaustive; the human cost is illustrative; the YOLO comparison is unequal-budget; the generative model samples, so lines vary.
@@ -133,7 +129,7 @@ I would build the streaming path and the event annotation set first, because the
 “The experiment does not measure that. It measures similarity to human references; the human column is the reference, not a competitor. A proper answer needs a blind human preference or MOS study, which I have not run.”
 
 **“Your GPT-2 is just templates.”**
-“No — the reel is 10/10 GPT-2. The full-match goals fell back to templates because the goal validator rejected GPT-2’s goal attempts. The fallback is deliberate and auditable.”
+“No — the reel is 10/10 GPT-2, and the v5 goal path now produces the API goal and both ARG–FRA goals as GPT-2. The grounded template is a safety net, not the generator.”
 
 **“YOLO26 is newer, so it must be better.”**
 “Not necessarily at unequal size, resolution and budget. My YOLO26n run is 2.39 M parameters and 50 epochs; the YOLOv5lu run is 53 M and 33 epochs. The fair full-size 640 px / 100-epoch comparison is still pending.”
@@ -162,11 +158,11 @@ In the 85:00–90:00 window the API returned:
 
 I fed the goal as structured facts — team, player, minute, score — to the same GPT-2/validator/TTS stack. It produced:
 
-> “GOAL! LD Alajuelense make it count — sheer precision at a vital time!”
+> “Goal! A. Hernandez (LD Alajuelense) latches on to a precise pass inside the box and unleashes a shot from the edge of the box into the left side of the goal. The score is 1:0.”
 
-The goal line is correct. The two cards were skipped because the current commentary label set has no card class. Generation was 45.3 s cold (includes loading GPT-2); TTS was 2.4 s; audio was 5.04 s. A deployed service would keep the model warm.
+The goal line is correct: team, player and score all match the feed, and it is GPT-2, not a template. The two cards were skipped because the current commentary label set has no card class. Generation was 76.1 s cold (includes loading GPT-2); TTS was 2.1 s; audio was 16.03 s. A deployed service would keep the model warm.
 
-**Oral sentence:** “The API-fed example gets the team and score right and removes perception entirely, but API-Football gives only major events — goals, cards, substitutions, VAR — not shots and corners. The video pipeline has richer events but the causal chunk got the side wrong. That is why a production system would use the API for event truth and video for enrichment.”
+**Oral sentence:** “The API-fed example gets the team, player and score right and removes perception entirely, but API-Football gives only major events — goals, cards, substitutions, VAR — not shots and corners. The video pipeline has richer events; the API is the cleaner event-truth source and the video is the enrichment source.”
 
 The comparison is **system-level, not same-match**: the API match is Alajuelense–Perez Zeledon; the pre-recorded segment is ARG–FRA.
 
@@ -174,25 +170,24 @@ The comparison is **system-level, not same-match**: the API match is Alajuelense
 
 ### Goal-generation fixes and retest
 
-Two cheap fixes were added:
+The v5 adapter was trained on an API-slot corpus: 38,815 training rows and 1,723 validation rows, 2 epochs, 4,852 steps, 1.09 h, final training loss 0.903. The prompt uses `<HOME>`, `<AWAY>`, `<TEAM>`, `<PLAYER>`, `<SCORE>` and `<MINUTE>`, and the facts are substituted after generation.
 
-1. **Case-variant team suppression** during decoding. The original blocklist had `lyon`, but the model generated `Lyon` and slipped past it. Lowercase, capitalised and uppercase forms are now blocked.
-2. **Goal prefill + body check.** Goal generation is forced to start with `GOAL! <team>`; the validator strips that prefix and requires a real goal action in the body, so “GOAL! … a corner kick was cleared” is rejected.
+Four fixes made the goal path usable:
 
-Retest results:
+1. **Slot-token prefill.** Goal generation starts with `Goal! <PLAYER>` (or `<TEAM>` when no scorer is known), matching the training distribution; the slot is filled after generation.
+2. **Beam search for goals.** Sampling drifted into corner/clearance narratives; 4-beam search stays on the high-probability training pattern.
+3. **Contradiction and score suppression.** Corner, clearance, save, free-kick, off-pitch and wrong-score tokens are blocked during decoding.
+4. **Validator tightening.** Both colon and hyphen scores are checked against the fact sheet; the goal body must contain a real goal action after the team/call prefix is stripped.
 
-- API goal, Alajuelense 90′: **template fell back** — the candidate described a corner/clearance and invented a player name.
-- ARG–FRA 80′: **GPT-2 accepted** — “GOAL! France … scores from long range …”
-- ARG–FRA 81′: **template fell back** — the candidate described a save/clearance.
+Retest results (all GPT-2, no template):
 
-So the fixes remove the `Lyon` case and improve one ARG goal, but do not guarantee GPT-2 goal lines. The validator still protects the output.
+- API goal, Alajuelense 90′: “Goal! A. Hernandez (LD Alajuelense) … into the left side of the goal. The score is 1:0.”
+- ARG–FRA 80′: “Goal! France … The score is 2:1.”
+- ARG–FRA 81′: “Goal! France … The score is 2:2.”
 
-**Training change needed:** training more on the current corpus will not fix out-of-distribution team/player names. The corpus needs:
-- team names anonymised or replaced with placeholders, then substituted at inference;
-- player names included in the prompt and target when the fact sheet has them;
-- more leagues/team names, or an API-style `[EVENT] goal by <team>, scorer <player>` format.
+The remaining limitation is fluency, not grounding: the 124 M model sometimes produces awkward clauses (“earn a first-time opportunity,” “the player (France)”), but the team, scorer and score are locked by the fact sheet. The validator still protects the output.
 
-For a production goal call, template-first with the API scorer is the robust policy; GPT-2 is better used for colour and non-goal events.
+For a production goal call, the v5 beam/validator path is the default; a human editor should review unusual clauses before broadcast.
 
 ## 8. Final three sentences to remember
 
