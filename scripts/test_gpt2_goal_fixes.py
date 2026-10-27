@@ -28,6 +28,7 @@ test(
     "api_alajuelense_90", {"home": "LD Alajuelense", "away": "Perez Zeledon"},
     {"goal_side": "home", "score_home": 1, "score_away": 0,
      "scoreline": "LD Alajuelense 1–0 Perez Zeledon", "minute": 90,
+     "player": "A. Hernandez",
      "ball_x_frac": 0.5, "possession_home": 0.5, "possession_away": 0.5,
      "n_tracks": 8.0, "crowd_rise": 1.6},
 )

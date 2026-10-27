@@ -111,9 +111,9 @@ def commentary():
 
 def latency():
     fig, ax = plt.subplots(figsize=(7.2, 2.3), constrained_layout=True)
-    labels = ["18 s clip", "5-min chunk", "Full match"]
-    vals = [0.5, 4.8, 16.6]
-    colors = [GREEN, RED, TEAL]
+    labels = ["18 s clip", "Full match"]
+    vals = [0.5, 16.6]
+    colors = [GREEN, TEAL]
     y = np.arange(len(labels))[::-1]
     ax.barh(y, vals, color=colors, height=0.55)
     ax.set_yticks(y); ax.set_yticklabels(labels)

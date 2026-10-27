@@ -114,7 +114,8 @@ def main():
                 project_name="Football Commentator", task_name=args.task_name,
                 task_type=TaskTypes.training, output_uri=True,
                 reuse_last_task_id=False,
-                tags=["aryaman", "gpt2", "lora", "commentary", "v4",
+                tags=["aryaman", "gpt2", "lora", "commentary",
+                      Path(args.out).name.replace("gpt2_lora_", ""),
                       "soccerreplay-1988"])
             task.connect({
                 "base_model": args.base,
@@ -189,8 +190,9 @@ def main():
                     task.upload_artifact(name, artifact_object=str(path))
             adapter = out / "adapter_model.safetensors"
             if adapter.exists():
+                run_tag = Path(args.out).name.replace("gpt2_lora_", "")
                 om = OutputModel(task=task,
-                                 name="aryaman-gpt2-lora-commentary-v4")
+                                 name=f"aryaman-gpt2-lora-commentary-{run_tag}")
                 om.update_weights(weights_filename=str(adapter),
                                   auto_delete_file=False)
             task.mark_completed()

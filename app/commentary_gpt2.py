@@ -8,6 +8,7 @@ repetition-penalized, sentence-trimmed) because small models loop easily.
 """
 from __future__ import annotations
 
+import os
 import re
 import threading
 
@@ -15,6 +16,9 @@ from app.config import settings
 
 _LOCK = threading.Lock()
 _MODEL = None  # lazy singleton
+# v5 is trained on the API-slot template; v4 uses the older named-team prompt.
+SLOT_MODE = (os.getenv("GPT2_SLOT_PROMPT") == "1"
+             or "v5" in settings.gpt2_lora_dir.name.lower())
 
 
 def available() -> bool:
@@ -100,12 +104,29 @@ def _repair_team_names(line: str, home: str, away: str, team: str) -> str:
     return line
 
 
+def _fill_slots(line: str, home: str, away: str, team: str, player: str,
+                hs: int, as_: int, minute: int) -> str:
+    """Substitute the API facts into the v5 slot template."""
+    values = {
+        "HOME": home, "AWAY": away, "TEAM": team,
+        "PLAYER": player or "the player",
+        "SCORE": f"{hs}-{as_}", "MINUTE": str(minute),
+    }
+    for key, value in values.items():
+        line = re.sub(rf"<\s*{key}\s*>", lambda _: value, line, flags=re.I)
+    return line
+
+
 _MAX_WORDS = 50  # two to three spoken sentences (~14-16 s of speech)
 
 
 def _clean(text: str) -> str:
     text = text.split("\n")[0]
     text = re.sub(r"[\[\]]", " ", text)  # never leak markup
+    # The v5 slot adapter can invent unresolved slots such as <GOAL> or
+    # <CEAD>; they are not facts and must never reach the viewer or the TTS.
+    text = re.sub(r"<[^<>]{1,30}>", " ", text)
+    text = re.sub(r"\(\s*\)", " ", text)  # empty slot residue
     text = re.sub(r"\s+", " ", text).strip()
     # Keep every complete sentence that fits inside the word cap. Trimming at
     # the *first* sentence (the old behaviour) threw away the second half of
@@ -177,9 +198,10 @@ _GENERIC_PROPER = {
 _PROPER_PAIR = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b")
 
 
-def _unknown_proper_noun(line: str, home: str, away: str) -> bool:
+def _unknown_proper_noun(line: str, home: str, away: str,
+                         extra: list[str] | None = None) -> bool:
     """True when the line names a club/competition we were not told about."""
-    allowed = [t for t in (home, away) if t]
+    allowed = [t for t in (home, away) if t] + [t for t in (extra or []) if t]
     for m in _PROPER_PAIR.finditer(line):
         low = m.group(1).lower()
         if low in _GENERIC_PROPER or any(t in low for t in allowed):
@@ -226,17 +248,81 @@ _GOAL_CONTRADICTIONS = (
     "denied", "deny", "denies", "wide", "off target", "saved", "save",
     "saves", "block", "blocks", "blocked", "clear", "clears", "cleared",
     "clearance", "disallowed", "ruled out", "no goal", "goal kick",
-    "missed", "over the bar", "hit the post", "hit the bar", "past the post",
-    "corner", "corner kick", "out of play", "free kick", "throw-in",
-    "awarded a corner",
+    "goal-kick", "missed", "over the bar", "hit the post", "hit the bar",
+    "past the post", "corner", "corner kick", "corner-kick", "out of play",
+    "out of action", "free kick", "free-kick", "throw-in", "throw in",
+    "awarded a corner", "off the pitch", "off of the pitch", "keeps it out",
+    "kept it out", "off the line", "onto the post", "against the post",
+    "wide of", "denied by", "saved by", "blocked by", "cleared by",
 )
 
 _GOAL_ACTIONS = (
     "score", "scored", "scores", "scoring", "finish", "finished", "net",
     "buried", "make it", "made it", "equaliser", "equalizer", "equalise",
-    "equalised", "converted", "header", "strike", "strikes", "shot", "goal",
+    "equalised", "converted", "header", "strike", "strikes", "shot",
     "winner", "levels", "levelled", "ripples", "celebrate",
+    "fires", "fired", "slots", "slotted", "taps", "tapped", "nods", "nodded",
+    "heads", "headed", "curls", "curled", "drills", "drilled", "smashes",
+    "smashed", "rifles", "rifled", "finishes",
 )
+
+
+def _goal_bad_ids(tok) -> list[list[int]]:
+    """Token sequences a goal call must never contain.
+
+    Rejecting after sampling is not enough: three consecutive v5 samples all
+    described a corner/clearance instead of the goal. Blocking the
+    contradiction phrases during decoding keeps the model inside goal language,
+    while the validator still checks the result.
+    """
+    out: list[list[int]] = []
+    seen: set[tuple[int, ...]] = set()
+    for phrase in _GOAL_CONTRADICTIONS:
+        for form in {phrase, phrase.capitalize()}:
+            for prefix in (" ", ""):
+                seq = tok.encode(prefix + form, add_special_tokens=False)
+                if seq and tuple(seq) not in seen:
+                    seen.add(tuple(seq))
+                    out.append(seq)
+    return out
+
+
+def _goal_digit_bad_ids(tok, allowed: set[str]) -> list[list[int]]:
+    """Block score/minutes that are not in the fact sheet.
+
+    GPT-2's target lines often end with "The score is 3:1"; the score in the
+    prompt is only 1-0. Blocking the other number tokens stops that drift
+    before it reaches the validator.
+    """
+    out: list[list[int]] = []
+    seen: set[tuple[int, ...]] = set()
+    for n in range(0, 100):
+        if str(n) in allowed:
+            continue
+        for prefix in (" ", ""):
+            seq = tok.encode(prefix + str(n), add_special_tokens=False)
+            if seq and tuple(seq) not in seen:
+                seen.add(tuple(seq))
+                out.append(seq)
+    return out
+
+
+def _goal_score_bad_ids(tok, hs: int, as_: int) -> list[list[int]]:
+    """Block every two-number score except the one in the fact sheet."""
+    out: list[list[int]] = []
+    seen: set[tuple[int, ...]] = set()
+    for a in range(0, 10):
+        for b in range(0, 10):
+            if (a, b) == (int(hs), int(as_)):
+                continue
+            for sep in (":", "-", "–", "—"):
+                for text in (f"{a}{sep}{b}", f"{a} {sep} {b}"):
+                    for prefix in (" ", ""):
+                        seq = tok.encode(prefix + text, add_special_tokens=False)
+                        if seq and tuple(seq) not in seen:
+                            seen.add(tuple(seq))
+                            out.append(seq)
+    return out
 
 
 def _phrase_in(text: str, phrases) -> bool:
@@ -251,7 +337,7 @@ def _phrase_in(text: str, phrases) -> bool:
 
 
 def _validate(line: str, features: dict, teams: dict, label: str,
-              team: str = "") -> bool:
+              team: str = "", player: str = "") -> bool:
     """Reject lines that claim facts the pipeline did not observe."""
     low = line.lower()
     home = (teams.get("home") or "").lower()
@@ -271,7 +357,8 @@ def _validate(line: str, features: dict, teams: dict, label: str,
         # "manchester" must not reject a line about "Manchester City".
         if name in low and not any(name in t for t in (home, away)):
             return False
-    if _unknown_proper_noun(line, home, away):
+    if _unknown_proper_noun(line, home, away,
+                            [player] if player else None):
         return False
     words = _EVENT_WORDS.get(label)
     if words is not None and not any(w in low for w in words):
@@ -286,16 +373,23 @@ def _validate(line: str, features: dict, teams: dict, label: str,
         first = re.split(r"(?<=[.!?])\s+", line.strip(), maxsplit=1)[0].lower()
         if not _phrase_in(first, _GOAL_STRONG):
             return False
-        body = re.sub(r"^\s*GOAL!\s*", "", line, count=1, flags=re.I)
+        body = line
+        # A broadcast attribution such as "France — GOAL! ..." puts the team
+        # before the call; strip that too or the goal word itself satisfies the
+        # action test.
+        if team:
+            body = re.sub(rf"^\s*{re.escape(team)}\s*[—–-]\s*", "", body,
+                          count=1, flags=re.I)
+        body = re.sub(r"^\s*GOAL!\s*", "", body, count=1, flags=re.I)
         if team:
             body = re.sub(rf"^\s*{re.escape(team)}\s*", "", body,
                           count=1, flags=re.I)
-        if not _phrase_in(body.lower(), _GOAL_ACTIONS):
+        if len(body.split()) < 4 or not _phrase_in(body.lower(), _GOAL_ACTIONS):
             return False
     hs = features.get("score_home")
     as_ = features.get("score_away")
     minute = int(features.get("minute", 0) or 0)
-    for m in re.finditer(r"(\d{1,2})\s*[-–—]\s*(\d{1,2})", line):
+    for m in re.finditer(r"(\d{1,2})\s*[:–—-]\s*(\d{1,2})", line):
         if hs is not None and (int(m.group(1)), int(m.group(2))) != (int(hs), int(as_)):
             return False
     allowed = {str(minute)}
@@ -325,6 +419,7 @@ def event_line(label: str, features: dict, teams: dict,
             "home" if (features.get("ball_x_frac", 0.5) or 0.5) >= 0.5
             else "away")
     team = teams.get(side, home)
+    player = str(features.get("player") or "").strip()
     minute = int(features.get("minute", 0) or 0)
     hs = features.get("score_home", 0)
     as_ = features.get("score_away", 0)
@@ -333,35 +428,61 @@ def event_line(label: str, features: dict, teams: dict,
     poss_team = teams.get(poss, "both sides") if poss in ("home", "away") \
         else "both sides"
     word = _LABEL_WORD.get(label, label)
-    history = (f"{scoreline}, {_ordinal(minute)} minute, "
-               f"{poss_team} in possession.")
-    # Prefill the control tokens so the model only has to write the line.
-    # This is the completion-only distribution the adapter was trained on.
-    prompt = (f"[HISTORY] {history} [EVENT] {word} by {team} "
-              f"[INTENSITY] {excitement} [COMMENTARY]")
+    if SLOT_MODE:
+        history = "<HOME> vs <AWAY>, score <SCORE>, <MINUTE> minute."
+        event = f"{word} by <TEAM>"
+        if player:
+            event += ", scorer <PLAYER>"
+        prompt = (f"[HISTORY] {history} [EVENT] {event} "
+                  f"[INTENSITY] {excitement} [COMMENTARY]")
+    else:
+        history = (f"{scoreline}, {_ordinal(minute)} minute, "
+                   f"{poss_team} in possession.")
+        # Prefill the control tokens so the model only has to write the line.
+        # This is the completion-only distribution the adapter was trained on.
+        prompt = (f"[HISTORY] {history} [EVENT] {word} by {team} "
+                  f"[INTENSITY] {excitement} [COMMENTARY]")
     import torch
     tok, model = _load()
     bad = _bad_word_ids(tok, home, away)
+    if label == "goal":
+        bad = bad + _goal_bad_ids(tok)
+        bad = bad + _goal_digit_bad_ids(
+            tok, {str(minute), str(hs), str(as_)})
+        bad = bad + _goal_score_bad_ids(tok, hs, as_)
     last_line = ""
-    for attempt in range(3):
+    attempts = 5 if label == "goal" else 3
+    for attempt in range(attempts):
         try:
             # Retries anchor the line on the event team; goals also anchor the
             # first sentence so the model cannot open with a corner/clearance.
             if label == "goal":
-                prefill = f"GOAL! {team} "
+                anchor = "<PLAYER>" if player else "<TEAM>"
+                prefill = (f"Goal! {anchor} " if SLOT_MODE
+                           else f"GOAL! {team} ")
+            elif SLOT_MODE:
+                prefill = ""
             else:
                 prefill = "" if attempt == 0 else f"{team} "
             prompt_in = prompt if not prefill else f"{prompt} {prefill.strip()}"
             with _LOCK, torch.no_grad():
                 ids = tok(prompt_in, return_tensors="pt").to(model.device)
-                out = model.generate(
-                    **ids, max_new_tokens=96, min_new_tokens=14, do_sample=True,
-                    temperature=max(0.55, 0.90 - 0.15 * attempt),
-                    top_p=0.9, repetition_penalty=1.25,
-                    no_repeat_ngram_size=4, pad_token_id=tok.eos_token_id,
-                    eos_token_id=tok.eos_token_id,
+                gen_kwargs = dict(
+                    max_new_tokens=96, min_new_tokens=14,
+                    repetition_penalty=1.25, no_repeat_ngram_size=4,
+                    pad_token_id=tok.eos_token_id, eos_token_id=tok.eos_token_id,
                     bad_words_ids=bad or None,
                 )
+                if label == "goal":
+                    # Sampling drifts into corner/clearance narratives. Beam
+                    # search stays near the high-probability training pattern
+                    # "Goal! <PLAYER> (<TEAM>) ...".
+                    gen_kwargs.update(do_sample=False, num_beams=4)
+                else:
+                    gen_kwargs.update(
+                        do_sample=True, top_p=0.9,
+                        temperature=max(0.55, 0.90 - 0.15 * attempt))
+                out = model.generate(**ids, **gen_kwargs)
             gen = tok.decode(out[0][ids["input_ids"].shape[1]:],
                              skip_special_tokens=True)
             if prefill:
@@ -372,6 +493,9 @@ def event_line(label: str, features: dict, teams: dict,
                 excitement = m.group(1).lower()
             if "[COMMENTARY]" in gen:
                 gen = gen.split("[COMMENTARY]", 1)[1]
+            if SLOT_MODE:
+                gen = _fill_slots(gen, home, away, team, player,
+                                  hs, as_, minute)
             line = _clean(gen)
             last_line = line
             # A line can be grounded in substance but omit the team name. The
@@ -387,7 +511,7 @@ def event_line(label: str, features: dict, teams: dict,
                 n_words = sum(1 for w in cand.split()
                               if any(c.isalpha() for c in w))
                 if n_words >= 4 and _validate(cand, features, teams, label,
-                                              team):
+                                              team, player):
                     return cand, excitement
         except Exception as e:  # noqa: BLE001
             print(f"  [gpt2-lora] generation failed ({type(e).__name__}: {e})")
