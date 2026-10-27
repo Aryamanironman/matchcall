@@ -241,11 +241,11 @@ pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
     <div class="panel plain">
       <div class="kicker">MODELS AND RUN</div>
       <div class="small-list">
-        <div><span class="k">YOLO26n</span><span class="v">2.39 M parameters, 640 px, 50 epochs, 2.70 h on an RTX 2050 4 GB.</span></div>
+        <div><span class="k">YOLO26n</span><span class="v">2.39 M parameters, 640 px, 50 epochs, 2.70 h on a consumer GPU.</span></div>
         <div><span class="k">GPT-2 v4</span><span class="v">LoRA r=32, 3 epochs, 2,481 steps, final loss 0.779.</span></div>
         <div><span class="k">Full match</span><span class="v">64.5 min, 43 commentary lines, 43/43 voiced, 19.4 min wall time.</span></div>
-        <div><span class="k">Evaluation</span><span class="v">40 held-out SoccerReplay prompts; 10 curated event moments; one 5-min causal chunk.</span></div>
-        <div><span class="k">Hardware</span><span class="v">One consumer GPU, one laptop, no cloud during inference.</span></div>
+        <div><span class="k">Evaluation</span><span class="v">40 held-out SoccerReplay prompts; 10 curated event moments.</span></div>
+        <div><span class="k">Hardware</span><span class="v">One consumer GPU, no cloud during inference.</span></div>
       </div>
     </div>
   </div>
@@ -342,45 +342,42 @@ pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
   <div class="section-head">
     <div>
       <div class="section-tag">Comparison 2</div>
-      <h2>Live vs pre-recorded</h2>
-      <p class="lead">The full-context run gets both goals right. A 5-minute causal chunk is faster
-        to first line, but it attributes both goals to the home side and invents an earlier goal.
-        The current system is pre-recorded only; chunking alone does not make it live.</p>
+      <h2>Pre-recorded vs API-fed</h2>
+      <p class="lead">The full-context run gets both goals right. A real API-Football feed removes
+        perception entirely; the same GPT-2/validator/TTS stack then produces a grounded goal line
+        from the API facts. The current system is pre-recorded only.</p>
     </div>
   </div>
 
   <div class="grid2">
     <div class="panel" style="border-color:var(--line2)">
       <div class="kicker" style="color:var(--lime)">PRE-RECORDED · FULL CONTEXT · CORRECT</div>
-      <div class="quote">[44:18] <strong>(goal)</strong> GOAL! <mark class="good">France</mark> make it count — sheer precision at a vital time!</div>
-      <div class="quote">[45:27] <strong>(goal)</strong> IT'S A GOAL! Clinical from <mark class="good">France</mark> — the keeper had no chance!</div>
+      <div class="quote">[80'] <strong>(goal)</strong> Goal! <mark class="good">France</mark> earn a first-time opportunity as they open up a promising attacking opportunity. The score is 2:1.</div>
+      <div class="quote">[81'] <strong>(goal)</strong> Goal! <mark class="good">France</mark> earn a first-time opportunity as they open up the defence to hit the ball from long range. The score is 2:2.</div>
       <div class="tag-row"><span class="tag good">2/2 goals</span><span class="tag good">team correct</span><span class="tag warn">first line at 16.6 min</span></div>
     </div>
-    <div class="panel" style="border-color:var(--coral)">
-      <div class="kicker" style="color:var(--coral)">LIVE-LIKE · 5-MIN CHUNK · WRONG</div>
-      <div class="quote">[02:01] <strong>(goal)</strong> GOAL! <mark class="bad">Argentina</mark> make it count — sheer precision at a vital time!</div>
-      <div class="quote">[04:05] <strong>(goal)</strong> IT'S A GOAL! Clinical from <mark class="bad">Argentina</mark> — the keeper had no chance!</div>
-      <div class="tag-row"><span class="tag bad">wrong side</span><span class="tag bad">false early goal</span><span class="tag good">first line at 4.8 min</span></div>
+    <div class="panel" style="border-color:var(--lime)">
+      <div class="kicker" style="color:var(--lime)">API-FOOTBALL · ALAJUELENSE 1–0 · GPT-2</div>
+      <div class="quote"><strong>(goal, 90')</strong> Goal! A. Hernandez (LD Alajuelense) latches on to a precise pass inside the box and unleashes a shot from the edge of the box into the left side of the goal. The score is 1:0.</div>
+      <div class="tag-row"><span class="tag good">1/1 goal</span><span class="tag good">team, player, score correct</span><span class="tag warn">76.1 s cold + 2.1 s TTS</span></div>
     </div>
   </div>
 
-  <div class="note" style="margin-top:14px"><strong>Ground truth from the score-bug reader:</strong>
-    the two anchors in the chunk are <code>away 44:33</code> and <code>away 45:42</code>; the
-    broadcast score flips 2–1 to 2–2. The chunk's generated lines still say Argentina. The side is
-    lost between the anchor and the realised line, and the event classifier also promotes an
-    earlier passage to a goal. This is why “faster” is not the same as “live.”</div>
+  <div class="note" style="margin-top:14px"><strong>API feed:</strong> the 85:00–90:00 window
+    contains two yellow cards and a 90' goal by A. Hernandez. The cards are skipped because the
+    current commentary label set has no card class. The API removes perception and gets the team,
+    player and score right, but it supplies only major events; the video pipeline supplies richer
+    events.</div>
 
   <div class="grid2" style="margin-top:24px">
     <div class="panel plain">
       <div class="chart-title"><h3>Time to first commentary line</h3><span class="chart-note">lower is better · axis 0–18 min</span></div>
       <div class="bars" aria-label="Time to first line">
         <div class="bar-line"><span class="bar-label">18 s clip</span><div class="bar-track"><span class="bar-fill" style="width:3%"></span></div><span class="bar-value">0.5 min</span></div>
-        <div class="bar-line"><span class="bar-label">5 min chunk</span><div class="bar-track"><span class="bar-fill tpl" style="width:27%"></span></div><span class="bar-value">4.8 min</span></div>
         <div class="bar-line"><span class="bar-label">Full match</span><div class="bar-track"><span class="bar-fill sky" style="width:92%"></span></div><span class="bar-value">16.6 min</span></div>
       </div>
-      <p class="note">The chunk is faster because it sees less. The full run waits for the whole
-        match before writing and voicing; the chunk still processes a whole 5-minute block before
-        the first line. Neither is a streaming system with bounded latency.</p>
+      <p class="note">The full run waits for the whole match before writing and voicing; it is not
+        a streaming system with bounded latency.</p>
     </div>
     <div class="panel plain">
       <div class="chart-title"><h3>Wall time versus real time</h3><span class="chart-note">1.00× = real time</span></div>
@@ -389,15 +386,14 @@ pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
           <thead><tr><th>Mode</th><th class="num">Input</th><th class="num">Wall</th><th class="num">Ratio</th></tr></thead>
           <tbody>
             <tr><td>18 s clip</td><td class="num">18 s</td><td class="num">39.8 s</td><td class="num">2.21×</td></tr>
-            <tr><td>5-min chunk</td><td class="num">300 s</td><td class="num">311.8 s</td><td class="num">1.04×</td></tr>
             <tr><td>Full match</td><td class="num">3,871 s</td><td class="num">1,165 s</td><td class="num">0.30×</td></tr>
           </tbody>
         </table>
       </div>
       <div class="verdict" style="margin-top:16px"><p><strong>Verdict.</strong> The full-match run is
         faster than real time in aggregate but not live: 16.6 minutes of latency before the first
-        line. The causal chunk is nearly real time but factually wrong. A live mode needs streaming
-        perception, incremental TTS and explicit side propagation, not just shorter inputs.</p></div>
+        line. A live mode needs streaming perception, incremental TTS and explicit side propagation,
+        not just shorter inputs.</p></div>
     </div>
   </div>
 </section>
@@ -524,7 +520,7 @@ pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
     <div>
       <div class="section-tag">Comparison 4</div>
       <h2>Cost</h2>
-      <p class="lead">On this laptop, a 64.5-minute match costs about one cent of electricity;
+      <p class="lead">Locally, a 64.5-minute match costs about one cent of electricity;
         on a cloud A10G it is under forty cents. Human commentary, even at a modest illustrative
         rate, is hundreds of times more expensive. The barrier is quality and latency, not compute.</p>
     </div>
@@ -534,7 +530,7 @@ pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
     <div class="panel plain">
       <div class="table-wrap wide">
         <table>
-          <thead><tr><th>Item</th><th class="num">Local RTX 2050</th><th class="num">Cloud g5.2xlarge</th><th class="num">Human team</th></tr></thead>
+          <thead><tr><th>Item</th><th class="num">Local GPU</th><th class="num">Cloud g5.2xlarge</th><th class="num">Human team</th></tr></thead>
           <tbody>
             <tr><td>Inference per match</td><td class="num">$0.010</td><td class="num">$0.392</td><td class="num">$300 live / $400 pre-recorded</td></tr>
             <tr><td>Training (both models)</td><td class="num">$0.109</td><td class="num">$4.40</td><td class="num">—</td></tr>
@@ -546,7 +542,7 @@ pre{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink2);
       </div>
       <div class="callout"><b>400–1,500×</b><span>cheaper than the illustrative human team on cloud
         compute, depending on whether the human rate is $25 or $100 per hour.</span></div>
-      <p class="note">Assumptions: cloud $1.21/h; local 100 W at $0.30/kWh; two-person human team
+      <p class="note">Assumptions: cloud $1.21/h; local electricity at $0.30/kWh; two-person human team
         at $50/h for 3 h live / 4 h pre-recorded. Human rates are illustrative, not a quote.
         Fish Audio is on the free tier; paid TTS, storage and egress are excluded.</p>
     </div>

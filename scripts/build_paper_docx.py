@@ -361,7 +361,7 @@ abstract = (
     "clustering and possession estimation supply player-level facts; GPT-2 with LoRA generates "
     "commentary under a grounding validator with a grounded template as a safety net; Fish Audio synthesises speech. "
     "On a 64.5-minute ARG–FRA broadcast, the pipeline produces 43 fully voiced lines in 19.4 minutes "
-    "on a 4 GB RTX 2050. Both goals are recovered with precision and recall 1.00, but overall event "
+    "on a single consumer GPU. Both goals are recovered with precision and recall 1.00, but overall event "
     "recall against ten curated moments is 0.40 at ±1 minute. On 40 held-out human references, GPT-2 "
     "v4 improves ROUGE-L from 0.093 to 0.185 and METEOR from 0.027 to 0.207 over templates, while "
     "BLEU-4 remains near zero. The system is pre-recorded only; a deployed live service would need "
@@ -408,7 +408,7 @@ P("We report three comparisons on a real broadcast: (i) GPT-2 commentary against
   "measured rather than hidden.")
 BP("Contributions.", "(1) A modular five-stage pipeline that separates deterministic facts from "
    "language and speech. (2) A score-bug goal anchor that infers the on-screen starting score and "
-   "survives short clips. (3) A full 64.5-minute end-to-end run with 43 voiced lines on a 4 GB GPU. "
+   "survives short clips. (3) A full 64.5-minute end-to-end run with 43 voiced lines on a single consumer GPU. "
    "(4) Three empirical comparisons, including negative results for general event spotting and API "
    "event coverage. (5) ClearML-logged training runs and a reproducible evaluation script.")
 
@@ -525,7 +525,7 @@ P("All end-to-end results use a 64.5-minute, 1920×1080 recording of the Argenti
   "for training in this paper; SoccerNet and other benchmarks appear only as related work.")
 doc.add_heading("4.2 Models and training", level=2)
 P("Table 1 summarises the trained components. YOLO26n was fine-tuned at 640 px for 50 epochs with "
-  "batch 1 on the RTX 2050; the best checkpoint was the final epoch, with mAP50 0.806 and mAP50–95 "
+  "batch 1 on a consumer GPU; the best checkpoint was the final epoch, with mAP50 0.806 and mAP50–95 "
   "0.480. GPT-2 v4 used LoRA rank 32, 160-token sequences, completion-only loss, three epochs and "
   "2,481 optimizer steps; the loss fell from 3.877 to 0.779. A second adapter, v5, used the same "
   "base and LoRA rank but the API-slot prompt and a 38,815-example training split (1,723 validation); "
@@ -533,7 +533,7 @@ P("Table 1 summarises the trained components. YOLO26n was fine-tuned at 640 px f
   "task 6acdac3186d640cc8a398898752dc90a). Fish Audio was used through its free tier, so no paid TTS "
   "price is included.")
 table_caption(1, "Trained components and schedules. The detector and language models were trained "
-                 "locally on one 4 GB GPU; ClearML logged all runs.")
+                 "locally on one consumer GPU; ClearML logged all runs.")
 add_table(
     ["Component", "Model / data", "Params", "Schedule", "Result"],
     [
@@ -554,7 +554,7 @@ P("Commentary is scored against human references with BLEU-1/2/4, ROUGE-L and ME
   "line. Cost is reported for local electricity, a cloud ml.g5.2xlarge at $1.21/h, and an "
   "illustrative two-person human team; the human rates are assumptions, not quotes.")
 doc.add_heading("4.4 Hardware and reproducibility", level=2)
-P("Inference and training used an NVIDIA RTX 2050 with 4 GB of VRAM. The full-match run, ClearML "
+P("Inference and training used a single consumer GPU. The full-match run, ClearML "
   "tasks, model checkpoints, comparison JSON and evaluation scripts are retained in the project "
   "repository. The key commands are listed in Appendix A.")
 
@@ -769,7 +769,7 @@ P("Table 7 reports the measured compute, the API-Football cost and an illustrati
 table_caption(7, "Cost per 64.5-minute match. Local electricity and cloud rates are measured/assumed; "
                  "API-Football was used on the free tier; human rates are illustrative, not quotes.")
 add_table(
-    ["Item", "Local RTX 2050", "Cloud g5.2xlarge", "API-Football", "Human team"],
+    ["Item", "Local GPU", "Cloud g5.2xlarge", "API-Football", "Human team"],
     [
         ["Inference", "$0.010", "$0.392", "—", "$300 live / $400 pre-recorded"],
         ["Training (both models)", "$0.109", "$4.40", "—", "—"],
