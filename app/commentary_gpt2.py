@@ -71,12 +71,22 @@ def _bad_word_ids(tok, home: str, away: str) -> list[list[int]]:
     """
     allowed = [t for t in (home.lower(), away.lower()) if t]
     out: list[list[int]] = []
+    seen: set[tuple[int, ...]] = set()
     for name in sorted(_BLOCK_NAMES):
         if any(name in t for t in allowed):
             continue
-        seq = tok.encode(" " + name, add_special_tokens=False)
-        if seq:
-            out.append(seq)
+        # Case variants matter: "lyon" was blocked but the model generated
+        # "Lyon" and slipped past the token-level guard.
+        forms = {name, name.capitalize(), name.title(), name.upper()}
+        for form in forms:
+            for prefix in (" ", ""):
+                seq = tok.encode(prefix + form, add_special_tokens=False)
+                if not seq:
+                    continue
+                key = tuple(seq)
+                if key not in seen:
+                    seen.add(key)
+                    out.append(seq)
     return out
 
 
@@ -217,6 +227,15 @@ _GOAL_CONTRADICTIONS = (
     "saves", "block", "blocks", "blocked", "clear", "clears", "cleared",
     "clearance", "disallowed", "ruled out", "no goal", "goal kick",
     "missed", "over the bar", "hit the post", "hit the bar", "past the post",
+    "corner", "corner kick", "out of play", "free kick", "throw-in",
+    "awarded a corner",
+)
+
+_GOAL_ACTIONS = (
+    "score", "scored", "scores", "scoring", "finish", "finished", "net",
+    "buried", "make it", "made it", "equaliser", "equalizer", "equalise",
+    "equalised", "converted", "header", "strike", "strikes", "shot", "goal",
+    "winner", "levels", "levelled", "ripples", "celebrate",
 )
 
 
@@ -261,9 +280,17 @@ def _validate(line: str, features: dict, teams: dict, label: str,
         if _phrase_in(low, _GOAL_CONTRADICTIONS):
             return False
         # The goal call must lead the line. "...another goal" at the end of a
-        # foul/corner description is not a goal call.
+        # foul/corner description is not a goal call. The forced prefix
+        # "GOAL! <team>" is stripped before checking the body, otherwise it
+        # would satisfy the goal-word test by itself.
         first = re.split(r"(?<=[.!?])\s+", line.strip(), maxsplit=1)[0].lower()
         if not _phrase_in(first, _GOAL_STRONG):
+            return False
+        body = re.sub(r"^\s*GOAL!\s*", "", line, count=1, flags=re.I)
+        if team:
+            body = re.sub(rf"^\s*{re.escape(team)}\s*", "", body,
+                          count=1, flags=re.I)
+        if not _phrase_in(body.lower(), _GOAL_ACTIONS):
             return False
     hs = features.get("score_home")
     as_ = features.get("score_away")
@@ -318,10 +345,13 @@ def event_line(label: str, features: dict, teams: dict,
     last_line = ""
     for attempt in range(3):
         try:
-            # retries anchor the line on the event team: the prompt already
-            # includes the team once, and a prefill makes copying unavoidable
-            prefill = "" if attempt == 0 else f"{team} "
-            prompt_in = prompt if attempt == 0 else f"{prompt} {team}"
+            # Retries anchor the line on the event team; goals also anchor the
+            # first sentence so the model cannot open with a corner/clearance.
+            if label == "goal":
+                prefill = f"GOAL! {team} "
+            else:
+                prefill = "" if attempt == 0 else f"{team} "
+            prompt_in = prompt if not prefill else f"{prompt} {prefill.strip()}"
             with _LOCK, torch.no_grad():
                 ids = tok(prompt_in, return_tensors="pt").to(model.device)
                 out = model.generate(
