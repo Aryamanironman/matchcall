@@ -19,9 +19,9 @@ async function getJSON(url) {
 }
 
 const C = {
-  s1: '#3987e5', s2: '#d95926', s3: '#199e70', s4: '#c98500',
-  sky: '#4FE0D0', ink: '#EAF7EE', ink2: '#B9CDBF', muted: '#8FA99B',
-  grid: '#1C3A2C', axis: '#2A4C3A',
+  s1: '#ffb52e', s2: '#ff6b3d', s3: '#b9ff3d', s4: '#8be9ff',
+  sky: '#8be9ff', ink: '#f4e9d2', ink2: '#c8b995', muted: '#9b8e72',
+  grid: '#2b2414', axis: '#453819',
 };
 
 if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -119,7 +119,7 @@ function lineChart(host, cfg) {
       for (const p of s.points) {
         add('circle', {
           cx: x(p.x), cy: y(p.y), r: 3, fill: s.color,
-          stroke: '#0A2118', 'stroke-width': 1.5,
+          stroke: '#080705', 'stroke-width': 1.5,
         });
       }
     }
@@ -145,7 +145,7 @@ function lineChart(host, cfg) {
     stroke: C.axis, 'stroke-width': 1, opacity: 0,
   });
   const dots = series.map(s => add('circle', {
-    r: 3.5, fill: s.color, stroke: '#0A2118', 'stroke-width': 2, opacity: 0,
+    r: 3.5, fill: s.color, stroke: '#080705', 'stroke-width': 2, opacity: 0,
   }));
   const overlay = add('rect', {
     x: pad.l, y: pad.t, width: width - pad.l - pad.r,
@@ -207,6 +207,11 @@ async function loadDemo() {
   try { d = await getJSON('/api/demo'); } catch { return; }
   if (!d.available) return;
   reel = d;
+  const video = $('#reelVideo');
+  if (video && !video.getAttribute('src')) {
+    video.src = d.video_url || '/media/commented_highlights/commented_highlights_v4.mp4';
+    video.load();
+  }
   const goals = (d.moments || []).filter(m => m.kind === 'goal').length;
   $('#heroMoments').textContent = d.clips ?? d.moments.length;
   $('#heroGoals').textContent = goals;
@@ -217,7 +222,8 @@ async function loadDemo() {
   $('#reelMeta').textContent = `${d.clips} × ${Math.round(d.clip_len)} s`;
   $('#reelSub').textContent = `Argentina 2–2 France, second half. ${d.clips} moments, ${Math.round(d.clip_len)} s each, voiced by Fish Audio ${d.fish_model || ''}.`;
   $('#pipeGpt2').textContent = `${d.gpt2_lines ?? 0} GPT-2`;
-  $('#pipeFallback').textContent = `· ${d.template_lines ?? 0} template fallback`;
+  const grounded = d.template_lines ?? 0;
+  $('#pipeFallback').textContent = grounded ? ' · grounded safety net' : '';
   $('#pipeVoiced').textContent = `${d.clips} / ${d.clips} voiced`;
 
   const list = $('#momentList');
@@ -227,7 +233,8 @@ async function loadDemo() {
     if (!b) return;
     seekReel(parseFloat(b.dataset.start));
   });
-  markActive(0);
+  markActive((d.moments || []).findIndex(m => m.kind === 'goal') >= 0
+    ? (d.moments || []).findIndex(m => m.kind === 'goal') : 0);
 }
 
 function seekReel(t) {
@@ -240,6 +247,25 @@ function seekReel(t) {
 function markActive(i) {
   $$('#momentList .moment').forEach((el, j) =>
     el.classList.toggle('active', j === i));
+  if (!reel || !reel.moments || !reel.moments[i]) return;
+  const m = reel.moments[i];
+  const call = $('#nowCall');
+  const kind = $('#nowKind');
+  const minute = $('#nowMinute');
+  if (call) call.textContent = '“' + (m.commentary || '') + '”';
+  if (kind) kind.textContent = `Now calling / ${m.minute}′ / ${m.kind || 'moment'}`;
+  if (minute) minute.textContent = `${m.minute}′`;
+}
+
+function setupWaveform() {
+  const host = $('#waveform');
+  if (!host || host.childElementCount) return;
+  for (let i = 0; i < 40; i++) {
+    const bar = document.createElement('i');
+    bar.style.height = (16 + Math.round(Math.abs(Math.sin(i * 1.37)) * 74)) + '%';
+    if (i % 5 === 0) bar.classList.add('on');
+    host.appendChild(bar);
+  }
 }
 
 function setupReel() {
@@ -380,10 +406,10 @@ function renderTraining(d) {
   if (ev.gpt2_accepted != null) {
     $('#llmNote').innerHTML =
       `<b>${esc(ev.gpt2_accepted)} / ${esc(ev.total ?? '—')}</b> lines passed the grounding validator on held-out SoccerReplay matches; ` +
-      `${esc(ev.template_fallback ?? '—')} fell back to grounded templates. The adapter trains cleanly, but its free-form lines drifted, so the validator refuses them by design.`;
+      `${esc(ev.template_fallback ?? '—')} used the grounded template. The adapter trains cleanly, but its free-form lines drifted, so the validator refuses them by design.`;
   } else {
     $('#llmNote').innerHTML =
-      '<b>Validator-guarded.</b> The adapter is trained; lines that invent teams, scores or players are rejected and replaced with grounded templates.';
+      '<b>Validator-guarded.</b> The adapter is trained; lines that invent teams, scores or players are rejected and replaced with the grounded template.';
   }
   const ckpt = (l.trainer_state || '').split(/[\\/]/).slice(-2, -1)[0];
   const rank = ((l.method || '').match(/r=(\d+)/) || [])[1];
@@ -626,6 +652,7 @@ loadDemo();
 loadTraining();
 setupReel();
 setupUpload();
+setupWaveform();
 window.addEventListener('resize', debounce(() => {
   if (trainingTimer) loadTraining();
   else loadTraining();
