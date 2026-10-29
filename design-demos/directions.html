@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matchcall — design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Libre+Franklin:wght@400;500;700&family=Doto:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111210;
+    --paper: #f1eadb;
+    --ink: #171612;
+    --line: #34342d;
+    --muted: #9d9b8c;
+    --lime: #d6ff42;
+    --cyan: #6de8ff;
+    --red: #f0523d;
+    --amber: #ffb52e;
+    --blue: #23476f;
+    --serif: "Fraunces", Georgia, serif;
+    --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --sans: "Barlow", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    --dot: "Doto", "Share Tech Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(214,255,66,.08), transparent 60%),
+      radial-gradient(700px 460px at 5% 10%, rgba(109,232,255,.05), transparent 60%),
+      var(--bg);
+    color: #e8e7da;
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { width: min(1240px, calc(100% - 48px)); margin-inline: auto; }
+  header { padding-block: 34px 26px; border-bottom: 1px solid #2b2c27; }
+  .kicker {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--lime);
+  }
+  h1 {
+    font-family: var(--cond); font-size: clamp(2.6rem, 6vw, 5.4rem);
+    line-height: .9; letter-spacing: -.01em; margin: 10px 0 12px;
+    font-weight: 800; max-width: 16ch;
+  }
+  .intro { max-width: 62ch; color: #b8b7a8; font-size: 1.02rem; }
+  .board {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    padding-block: 28px 18px;
+  }
+  .card {
+    border: 1px solid #33342d; background: #191a16; border-radius: 4px;
+    overflow: hidden; display: flex; flex-direction: column;
+    min-width: 0;
+  }
+  .preview { height: 210px; position: relative; overflow: hidden; border-bottom: 1px solid #33342d; }
+  .preview .tag { display: none; }
+  .card-body { padding: 16px 16px 18px; display: grid; gap: 8px; }
+  .card-body h2 {
+    font-family: var(--cond); font-size: 1.55rem; line-height: 1; margin: 0;
+    font-weight: 700;
+  }
+  .card-body p { margin: 0; color: #aaa999; font-size: .88rem; }
+  .card-body .why { color: #77786b; font-size: .78rem; font-family: var(--mono); }
+  .card-body a {
+    margin-top: 4px; font-family: var(--cond); font-weight: 700; font-size: 1rem;
+    text-decoration: none; color: var(--lime); letter-spacing: .02em;
+  }
+  .card-body a:hover { text-decoration: underline; }
+
+  /* A1 — world feed */
+  .a1 { background: #071321; color: #eaf6ff; }
+  .a1 .bar { height: 23px; background: #0b1e31; display: flex; align-items: center; gap: 8px; padding: 0 10px; font: 9px/1 var(--mono); color: #7b9ab3; }
+  .a1 .bar b { color: #6de8ff; }
+  .a1 .scorebug { position: absolute; left: 12px; top: 42px; display: flex; }
+  .a1 .scorebug span { background: #eaf6ff; color: #071321; padding: 5px 8px; font: 700 12px/1 var(--cond); }
+  .a1 .scorebug span + span { background: #d6ff42; }
+  .a1 .monitor { position: absolute; left: 12px; right: 12px; top: 78px; height: 86px; background: #0d2135; border: 1px solid #22425c; overflow: hidden; }
+  .a1 .monitor:before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, #204b5d 0 35%, #143243 35% 100%); }
+  .a1 .lower { position: absolute; left: 0; right: 0; bottom: 0; background: #071321e6; border-top: 2px solid #6de8ff; padding: 6px 8px; font: 9px/1.3 var(--sans); }
+  .a1 .lower b { color: #d6ff42; font-family: var(--cond); font-size: 12px; }
+  .a1 .rundown { position: absolute; right: 12px; top: 42px; width: 88px; display: grid; gap: 4px; }
+  .a1 .rundown i { height: 9px; background: #163047; display: block; }
+  .a1 .rundown i:nth-child(2) { background: #6de8ff; width: 70%; }
+
+  /* A2 — network ticker */
+  .a2 { background: #050505; color: #fff; }
+  .a2 .top { background: #d9271c; height: 22px; display: flex; align-items: center; padding: 0 10px; font: 700 10px/1 var(--cond); letter-spacing: .08em; }
+  .a2 .big { position: absolute; left: 12px; top: 48px; font: 800 30px/.85 var(--cond); letter-spacing: -.02em; }
+  .a2 .big em { color: #ffcf2e; font-style: normal; }
+  .a2 .ticker { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: #fff; color: #080808; display: flex; align-items: center; gap: 10px; padding: 0 10px; font: 600 9px/1 var(--cond); }
+  .a2 .ticker b { background: #d9271c; color: #fff; padding: 5px 6px; font-size: 8px; }
+  .a2 .lines { position: absolute; left: 12px; top: 116px; width: 55%; display: grid; gap: 4px; }
+  .a2 .lines i { display: block; height: 7px; background: #272727; }
+  .a2 .lines i:nth-child(2) { width: 80%; background: #d9271c; }
+
+  /* B1 — programme */
+  .b1 { background: #f1eadb; color: #171612; }
+  .b1 .rule { border-top: 3px double #171612; margin: 10px 12px 0; }
+  .b1 .mast { font: 900 24px/.85 var(--serif); text-align: center; padding-top: 8px; letter-spacing: -.03em; }
+  .b1 .sub { font: 8px/1 var(--mono); text-align: center; letter-spacing: .16em; margin-top: 5px; }
+  .b1 .photo { position: absolute; left: 12px; top: 70px; width: 43%; height: 92px; background: #c5322c; filter: grayscale(1) contrast(1.2); opacity: .85; }
+  .b1 .headline { position: absolute; left: 12px; top: 170px; font: 700 16px/1 var(--serif); width: 80%; }
+  .b1 .col { position: absolute; right: 12px; top: 72px; width: 43%; font: 7px/1.6 var(--sans); color: #4d4a40; }
+  .b1 .col b { display: block; font: 700 7px/1 var(--mono); color: #c5322c; letter-spacing: .1em; margin-bottom: 5px; }
+  .b1 .score { position: absolute; left: 12px; top: 48px; font: 700 10px/1 var(--mono); color: #203a5b; }
+
+  /* B2 — club journal */
+  .b2 { background: #ddd8cb; color: #151515; }
+  .b2 .bar { height: 20px; background: #151515; color: #ddd8cb; display: flex; align-items: center; padding: 0 10px; font: 8px/1 var(--mono); letter-spacing: .12em; }
+  .b2 .head { font: 800 25px/.86 var(--cond); padding: 26px 12px 0; text-transform: uppercase; }
+  .b2 .head span { color: #b72c24; }
+  .b2 .grid { position: absolute; left: 12px; right: 12px; bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .b2 .grid i { height: 30px; background: #bdb7a9; display: block; }
+  .b2 .grid i:nth-child(2) { background: #b72c24; }
+
+  /* C1 — stadium board */
+  .c1 { background: #050505; color: #ffb52e; }
+  .c1 .gridbg { position: absolute; inset: 0; background-image: radial-gradient(#2a1b05 1px, transparent 1px); background-size: 5px 5px; opacity: .55; }
+  .c1 .label { position: absolute; left: 12px; top: 12px; font: 8px/1 var(--mono); letter-spacing: .16em; color: #ffe39c; }
+  .c1 .led { position: absolute; left: 12px; top: 42px; font: 900 16px/.9 var(--dot); letter-spacing: .08em; text-shadow: 0 0 10px #ffb52e; }
+  .c1 .ledsmall { position: absolute; right: 12px; top: 42px; font: 700 8px/1.4 var(--dot); text-align: right; color: #d7ff42; text-shadow: 0 0 8px #d7ff42; }
+  .c1 .log { position: absolute; left: 12px; right: 12px; bottom: 12px; font: 7px/1.7 var(--mono); color: #9cff8a; }
+  .c1 .log b { color: #ffb52e; }
+  .c1 .scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent 0 3px, #00000066 3px 4px); pointer-events: none; }
+
+  /* C2 — radio booth */
+  .c2 { background: #2b2119; color: #e9dcc6; }
+  .c2 .top { height: 22px; background: #3a2b20; display: flex; align-items: center; padding: 0 10px; font: 8px/1 var(--mono); letter-spacing: .14em; color: #d9b98f; }
+  .c2 .dial { position: absolute; left: 12px; top: 42px; font: 700 11px/1 var(--mono); color: #f0b56c; }
+  .c2 .wave { position: absolute; left: 12px; right: 12px; top: 72px; height: 64px; display: flex; align-items: center; gap: 3px; }
+  .c2 .wave i { flex: 1; background: #d4843b; height: 30%; display: block; }
+  .c2 .quote { position: absolute; left: 12px; right: 12px; bottom: 18px; font: 600 9px/1.4 var(--serif); color: #f5e7d2; }
+  .c2 .quote b { color: #f0b56c; font-family: var(--mono); font-size: 8px; letter-spacing: .1em; }
+
+  .footer { padding: 20px 0 46px; border-top: 1px solid #2b2c27; color: #77786b; font-family: var(--mono); font-size: 11px; display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .footer b { color: #b8b7a8; font-weight: 500; }
+  /* readability floor for the direction board */
+  .kicker, .footer { font-size: 14px; }
+  .card-body p { font-size: 14px; }
+  .card-body .why { font-size: 14px; color: #a8a798; }
+  .preview * { font-size: 14px !important; }
+  .b2 .head span { color: #9b1f18; }
+  @media (max-width: 980px) { .board { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) {
+    .wrap { width: calc(100% - 32px); }
+    .board { grid-template-columns: 1fr; }
+    .preview { height: 200px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="kicker">Matchcall / design exploration / six candidates</div>
+    <h1>Six ways to call a match.</h1>
+    <p class="intro">Three directions, two candidates each. The first three are the strongest and most different; the other three are kept as alternates. Pick one and I’ll take it through the full UI.</p>
+  </div>
+</header>
+<main class="wrap">
+  <div class="board">
+
+    <article class="card">
+      <div class="preview a1">
+        <span class="tag">A1 / full</span>
+        <div class="bar"><b>MATCHCALL</b><span>WORLD FEED</span><span style="margin-left:auto">LIVE</span></div>
+        <div class="scorebug"><span>ARG 2</span><span>FRA 2</span></div>
+        <div class="monitor"><div class="lower"><b>81′ · GOAL</b><br>France make it 2–2.</div></div>
+        <div class="rundown"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="card-body">
+        <h2>World Feed</h2>
+        <p>Broadcast control-room language: program monitor, score bug, lower-third, rundown rail, on-air tally.</p>
+        <div class="why">A1 / full · Best designer · TV graphics package</div>
+        <a href="direction-a.html">Open full sample →</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="preview a2">
+        <span class="tag">A2 / alt</span>
+        <div class="top">MATCHCALL · LIVE</div>
+        <div class="big">THE<br>FINAL<br><em>WORD.</em></div>
+        <div class="lines"><i></i><i></i><i></i></div>
+        <div class="ticker"><b>GOAL</b><span>81′ FRA 2–2 · commentary lands on the replay</span></div>
+      </div>
+      <div class="card-body">
+        <h2>Network Ticker</h2>
+        <p>American sports-network energy: hard black, red slash, headline stack, continuous bottom ticker.</p>
+        <div class="why">A2 / alt · Real reference · network broadcast</div>
+        <a href="direction-a.html">Open A1 full sample →</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="preview b1">
+        <span class="tag">B1 / full</span>
+        <div class="rule"></div>
+        <div class="mast">MATCHCALL</div>
+        <div class="sub">THE MATCHDAY PROGRAMME · NO. 04</div>
+        <div class="photo"></div>
+        <div class="col"><b>FROM THE BOX</b>“France make it 2–2 with a clean finish. The ground is up.”</div>
+        <div class="headline">The match,<br>in its own words.</div>
+      </div>
+      <div class="card-body">
+        <h2>The Programme</h2>
+        <p>Printed matchday artefact: masthead, duotone photo, editorial columns, pull quotes, ticket-stub CTA.</p>
+        <div class="why">B1 / full · Best designer · matchday print</div>
+        <a href="direction-b.html">Open full sample →</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="preview b2">
+        <span class="tag">B2 / alt</span>
+        <div class="bar">CLUB JOURNAL / MATCH REPORT</div>
+        <div class="head">THE<br>LATE<br><span>GOAL.</span></div>
+        <div class="grid"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="card-body">
+        <h2>Club Journal</h2>
+        <p>Newsprint-and-ink club journal: tighter grid, mono labels, red rule, reportage rather than programme.</p>
+        <div class="why">B2 / alt · Real reference · club newspaper</div>
+        <a href="direction-b.html">Open B1 full sample →</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="preview c1">
+        <span class="tag">C1 / full</span>
+        <div class="gridbg"></div>
+        <div class="label">MATCHCALL STADIUM · LUSAIL</div>
+        <div class="led">ARG 2 — 2 FRA</div>
+        <div class="ledsmall">81:14<br>GOAL</div>
+        <div class="log"><b>81′</b> FRANCE SCORES · 2–2<br><b>80′</b> FRANCE SCORES · 2–1<br><b>64′</b> POSSESSION 48 / 52</div>
+        <div class="scan"></div>
+      </div>
+      <div class="card-body">
+        <h2>Stadium Board</h2>
+        <p>LED scoreboard and terminal: dot-matrix digits, amber glow, scanlines, play-by-play as a stadium readout.</p>
+        <div class="why">C1 / full · Random style · stadium LED</div>
+        <a href="direction-c.html">Open full sample →</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="preview c2">
+        <span class="tag">C2 / alt</span>
+        <div class="top">MATCHCALL RADIO · 90.4</div>
+        <div class="dial">ON AIR / 81:14</div>
+        <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="quote"><b>COMMENTARY</b><br>“France have their equaliser. The stadium is shaking.”</div>
+      </div>
+      <div class="card-body">
+        <h2>Radio Booth</h2>
+        <p>Analogue warmth: wooden booth, VU meter, waveform, one voice. Audio-first rather than screen-first.</p>
+        <div class="why">C2 / alt · Random style · radio studio</div>
+        <a href="direction-c.html">Open C1 full sample →</a>
+      </div>
+    </article>
+
+  </div>
+  <div class="footer">
+    <span><b>Recommendation:</b> A1 for the product page, B1 for the report/cover, C1 for the reel player.</span>
+    <span>All content is real Matchcall data · no lorem ipsum</span>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matchcall — World Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #050c14;
+    --bg2: #071523;
+    --panel: #0a1b2b;
+    --panel2: #0e2438;
+    --line: #1d3b52;
+    --line2: #2b5874;
+    --ink: #eff8ff;
+    --ink2: #b7cddd;
+    --muted: #7f9bb0;
+    --cyan: #6de8ff;
+    --lime: #d6ff42;
+    --red: #ff5a4e;
+    --amber: #ffc24b;
+    --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    --ease: cubic-bezier(.2,.7,.2,1);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--body); font-size: 16px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.12) 3px 4px);
+    opacity: .28;
+  }
+  img, video, svg { display: block; max-width: 100%; }
+  a { color: inherit; }
+  button, input { font: inherit; color: inherit; }
+  h1,h2,h3,p,dl,dd,figure { margin: 0; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  ::selection { background: var(--lime); color: #06111b; }
+  .wrap { width: min(1320px, calc(100% - 56px)); margin-inline: auto; }
+  .mono { font-family: var(--mono); }
+  .kicker {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--cyan);
+  }
+  .kicker b { color: var(--lime); font-weight: 500; }
+
+  /* top signal strip */
+  .signal {
+    position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--line);
+    background: rgba(5,12,20,.88); backdrop-filter: blur(14px);
+  }
+  .signal .wrap { min-height: 36px; display: flex; align-items: center; gap: 18px; }
+  .onair { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 10px; letter-spacing: .13em; color: var(--red); }
+  .onair i { width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(255,90,78,.13); animation: blink 1.8s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .signal .feed { color: var(--muted); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; }
+  .signal .clock { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .signal .clock b { color: var(--lime); }
+  .signal .score-mini { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .04em; }
+
+  /* header */
+  .mast { border-bottom: 1px solid var(--line); }
+  .mast .wrap { min-height: 78px; display: flex; align-items: center; gap: 30px; }
+  .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; }
+  .brand-mark {
+    width: 34px; height: 34px; display: grid; place-items: center;
+    background: var(--lime); color: #06111b; font-family: var(--display);
+    font-weight: 800; font-size: 21px; clip-path: polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%);
+  }
+  .brand-word { font-family: var(--display); font-weight: 800; font-size: 23px; letter-spacing: .05em; }
+  .brand-sub { color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: .14em; margin-left: 2px; }
+  .mast nav { margin-left: auto; display: flex; gap: 24px; }
+  .mast nav a { text-decoration: none; color: var(--ink2); font-size: 13px; }
+  .mast nav a:hover { color: var(--lime); }
+  .mast .run { font-family: var(--display); font-weight: 700; font-size: 14px; letter-spacing: .04em; padding: 9px 14px; border: 1px solid var(--lime); color: var(--lime); text-decoration: none; }
+
+  /* hero */
+  .hero { padding-block: 40px 28px; }
+  .hero-grid { display: grid; grid-template-columns: .88fr 1.12fr; gap: 44px; align-items: start; }
+  .hero h1 {
+    font-family: var(--display); font-weight: 800; font-size: clamp(3.6rem, 7.4vw, 7.2rem);
+    line-height: .82; letter-spacing: -.012em; text-wrap: balance; margin-top: 12px;
+  }
+  .hero h1 span { color: var(--lime); }
+  .hero .lede { color: var(--ink2); font-size: 1.05rem; max-width: 42ch; margin-top: 18px; }
+  .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: .03em;
+    padding: 11px 18px; text-decoration: none; border: 1px solid transparent; transition: .16s var(--ease);
+  }
+  .btn-primary { background: var(--lime); color: #06111b; }
+  .btn-primary:hover { background: #e3ff77; transform: translateY(-1px); }
+  .btn-ghost { border-color: var(--line2); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+  .hero-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 34px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .hero-stats dd { font-family: var(--display); font-size: 1.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .hero-stats dt { color: var(--muted); font-size: 11px; margin-top: 4px; }
+
+  /* monitor */
+  .monitor { border: 1px solid var(--line2); background: #06111b; box-shadow: 0 30px 70px rgba(0,0,0,.45); }
+  .monitor-top { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 9px; letter-spacing: .12em; color: var(--muted); }
+  .monitor-top b { color: var(--cyan); font-weight: 500; }
+  .monitor-top .right { margin-left: auto; color: var(--lime); }
+  .screen { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0b2030; }
+  .screen img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.6) contrast(1.12) brightness(.72); }
+  .screen::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,12,20,.08) 0 40%, rgba(5,12,20,.82) 100%); }
+  .scorebug { position: absolute; top: 14px; left: 14px; z-index: 3; display: flex; font-family: var(--display); font-weight: 700; }
+  .scorebug .team { background: var(--ink); color: #06111b; padding: 7px 10px; font-size: 20px; letter-spacing: .03em; }
+  .scorebug .team + .team { background: var(--lime); }
+  .scorebug .time { background: #06111b; color: var(--amber); border: 1px solid var(--line2); padding: 7px 9px; font-family: var(--mono); font-size: 12px; display: flex; align-items: center; }
+  .lower {
+    position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 3;
+    border-left: 4px solid var(--cyan); background: rgba(5,17,27,.9);
+    padding: 10px 14px 12px; backdrop-filter: blur(6px);
+    animation: slideup .7s .3s both var(--ease);
+  }
+  @keyframes slideup { from { transform: translateY(18px); opacity: 0 } to { transform: none; opacity: 1 } }
+  .lower .tag { color: var(--lime); font-family: var(--mono); font-size: 9px; letter-spacing: .14em; }
+  .lower .line { font-family: var(--display); font-size: clamp(1.25rem, 2.2vw, 1.85rem); line-height: 1.02; font-weight: 600; margin-top: 5px; }
+  .lower .line b { color: var(--lime); }
+  .lower .meta { color: var(--muted); font-family: var(--mono); font-size: 9px; margin-top: 6px; }
+  .monitor-foot { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); }
+  .tick { flex: 1; height: 4px; background: #143047; position: relative; }
+  .tick.on { background: var(--cyan); }
+  .tick.goal { background: var(--lime); }
+  .monitor-foot span { color: var(--muted); font-family: var(--mono); font-size: 9px; margin-left: 8px; }
+
+  /* console */
+  .console { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg2); }
+  .console .wrap { display: grid; grid-template-columns: 1.3fr .7fr; gap: 0; }
+  .now { padding: 30px 32px 30px 0; border-right: 1px solid var(--line); }
+  .now-head { display: flex; align-items: center; gap: 12px; }
+  .now-head .kicker { color: var(--lime); }
+  .now-head .source { margin-left: auto; font-family: var(--mono); font-size: 9px; color: var(--muted); border: 1px solid var(--line); padding: 3px 7px; }
+  .now blockquote { margin: 14px 0 0; font-family: var(--display); font-size: clamp(1.7rem, 3vw, 2.7rem); line-height: 1.02; font-weight: 600; max-width: 24ch; }
+  .now blockquote em { color: var(--cyan); font-style: normal; }
+  .now .meta { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .now .meta b { color: var(--ink2); font-weight: 500; }
+  .wave { display: flex; align-items: center; gap: 3px; height: 46px; margin-top: 20px; }
+  .wave i { flex: 1; background: var(--line2); height: 18%; transition: height .4s var(--ease); }
+  .wave i.hot { background: var(--cyan); }
+  .rundown { padding: 26px 0 26px 26px; }
+  .rundown-head { display: flex; align-items: baseline; gap: 10px; }
+  .rundown-head h2 { font-family: var(--display); font-size: 1.4rem; font-weight: 700; letter-spacing: .02em; }
+  .rundown-head span { margin-left: auto; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .moment-list { margin-top: 12px; display: grid; }
+  .moment {
+    display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: start;
+    padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer;
+    background: none; border-left: 0; border-right: 0; border-bottom: 0; text-align: left;
+    color: inherit; width: 100%;
+  }
+  .moment:hover .m-line, .moment.active .m-line { color: var(--lime); }
+  .moment .m-min { font-family: var(--mono); font-size: 10px; color: var(--muted); padding-top: 2px; }
+  .moment .m-kind { display: block; font-family: var(--mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--cyan); }
+  .moment .m-line { display: block; font-size: 12px; line-height: 1.35; color: var(--ink2); margin-top: 2px; }
+  .moment.goal .m-kind { color: var(--lime); }
+
+  /* sections */
+  .section { padding-block: 64px; }
+  .section-head { display: flex; align-items: end; gap: 30px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+  .section-head h2 { font-family: var(--display); font-size: clamp(2.2rem, 4vw, 3.4rem); line-height: .9; font-weight: 800; letter-spacing: -.01em; }
+  .section-head p { margin-left: auto; max-width: 38ch; color: var(--muted); font-size: 13px; }
+  .stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 18px; }
+  .stage { background: var(--bg); padding: 20px 16px 22px; min-height: 190px; position: relative; }
+  .stage:hover { background: var(--panel); }
+  .stage .n { font-family: var(--mono); font-size: 9px; color: var(--cyan); letter-spacing: .14em; }
+  .stage h3 { font-family: var(--display); font-size: 1.35rem; line-height: 1; margin-top: 12px; font-weight: 700; }
+  .stage p { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .stage .out { position: absolute; left: 16px; right: 16px; bottom: 14px; font-family: var(--mono); font-size: 9px; color: var(--lime); border-top: 1px solid var(--line); padding-top: 8px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .api-card { border: 1px solid var(--line2); background: linear-gradient(135deg, #0a1e2d, #07131f); padding: 24px; }
+  .api-card .kicker { color: var(--amber); }
+  .api-card h3 { font-family: var(--display); font-size: 2rem; line-height: .95; margin-top: 8px; }
+  .api-card .score { font-family: var(--mono); color: var(--lime); font-size: 12px; margin-top: 6px; }
+  .api-card blockquote { font-family: var(--display); font-size: 1.35rem; line-height: 1.12; margin: 18px 0 0; color: var(--ink); }
+  .api-card blockquote b { color: var(--cyan); font-weight: 600; }
+  .api-card .foot { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 16px; }
+  .reel { border: 1px solid var(--line); background: var(--panel); display: grid; grid-template-columns: 160px 1fr; }
+  .reel .thumb { position: relative; overflow: hidden; min-height: 170px; }
+  .reel .thumb img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.4) contrast(1.1); }
+  .reel .thumb .play { position: absolute; inset: 0; display: grid; place-items: center; }
+  .reel .thumb .play span { width: 44px; height: 44px; border: 1px solid var(--lime); border-radius: 50%; display: grid; place-items: center; color: var(--lime); font-family: var(--mono); font-size: 10px; background: rgba(5,12,20,.55); }
+  .reel .body { padding: 18px; display: flex; flex-direction: column; }
+  .reel .body h3 { font-family: var(--display); font-size: 1.5rem; line-height: .95; }
+  .reel .body p { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .reel .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 12px; }
+  .tag { font-family: var(--mono); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--line2); padding: 4px 6px; color: var(--ink2); }
+  .tag.lime { border-color: var(--lime); color: var(--lime); }
+
+  .cta-band { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--lime); color: #06111b; }
+  .cta-band .wrap { min-height: 100px; display: flex; align-items: center; gap: 24px; }
+  .cta-band h2 { font-family: var(--display); font-size: clamp(1.7rem, 3vw, 2.6rem); line-height: .9; font-weight: 800; }
+  .cta-band p { font-size: 13px; margin-left: auto; max-width: 34ch; }
+  .cta-band a { font-family: var(--display); font-weight: 800; font-size: 16px; border: 1px solid #06111b; padding: 10px 16px; text-decoration: none; }
+
+  footer { padding-block: 22px 40px; color: var(--muted); font-family: var(--mono); font-size: 10px; }
+  footer .wrap { display: flex; gap: 20px; flex-wrap: wrap; justify-content: space-between; }
+  footer b { color: var(--ink2); font-weight: 500; }
+
+  @media (max-width: 1080px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .console .wrap { grid-template-columns: 1fr; }
+    .now { border-right: 0; border-bottom: 1px solid var(--line); padding-right: 0; }
+    .rundown { padding-left: 0; }
+    .stages { grid-template-columns: repeat(3,1fr); }
+    .stage:nth-child(4), .stage:nth-child(5) { grid-column: span 1; }
+  }
+  @media (max-width: 720px) {
+    .wrap { width: calc(100% - 32px); }
+    .signal .feed, .signal .score-mini { display: none; }
+    .signal .clock { margin-left: auto; }
+    .mast nav { display: none; }
+    .mast .run { margin-left: auto; }
+    .hero { padding-top: 26px; }
+    .hero h1 { font-size: clamp(3rem, 14vw, 4.8rem); }
+    .hero-stats { grid-template-columns: repeat(2,1fr); }
+    .stages { grid-template-columns: 1fr 1fr; }
+    .stage { min-height: 170px; }
+    .split { grid-template-columns: 1fr; }
+    .reel { grid-template-columns: 1fr; }
+    .reel .thumb { min-height: 150px; }
+    .cta-band .wrap { flex-wrap: wrap; padding-block: 18px; }
+    .cta-band p { margin-left: 0; }
+    .section { padding-block: 44px; }
+    .section-head { display: block; }
+    .section-head p { margin: 8px 0 0; }
+  }
+  /* readability floor for the design sample */
+  .kicker, .onair, .brand-sub, .signal .feed, .signal .clock, .monitor-top,
+  .lower .meta, .m-kind, .m-min, .stage .n, .stage .out, .tag,
+  .monitor-foot span, .now .meta, .rundown-head span, .api-card .score,
+  .api-card .foot, .hero-stats dt, .section-head p, .mast nav a,
+  .cta-band p, footer, .lower .tag, .source, .scorebug .time { font-size: 12px; }
+  .signal .feed, .section-head p { font-size: 14px; }
+  .cta-band p { font-size: 14px; }
+  .api-card .kicker, .api-card .foot { font-size: 14px; }
+  .now-head .source { font-size: 12px; }
+  .scorebug .time { font-size: 12px !important; }
+  .moment .m-kind, .moment .m-min { font-size: 12px; }
+  .moment .m-line, .stage p, .reel .body p { font-size: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="signal">
+  <div class="wrap">
+    <span class="onair"><i></i>ON AIR</span>
+    <span class="feed">MATCHCALL / WORLD FEED / ARG–FRA</span>
+    <span class="clock">81:14 <b>2ND HALF</b></span>
+    <span class="score-mini">ARG 2 – 2 FRA</span>
+  </div>
+</div>
+
+<header class="mast">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="brand-mark">M</span>
+      <span class="brand-word">MATCHCALL</span>
+      <span class="brand-sub">COMMENTARY SYSTEM</span>
+    </a>
+    <nav>
+      <a href="#console">The call</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#api">API feed</a>
+      <a href="#reel">Reel</a>
+    </nav>
+    <a class="run" href="#reel">RUN A MATCH</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="kicker">Live matchday commentary / <b>five stages, one pass</b></div>
+        <h1>Every goal, called <span>the moment it lands.</span></h1>
+        <p class="lede">The detector finds the moment. The tracker reads the play. GPT-2 writes the line. Fish says it out loud — before the replay ends.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="#console">Watch the call</a>
+          <a class="btn btn-ghost" href="#pipeline">See the pipeline</a>
+        </div>
+        <dl class="hero-stats">
+          <div><dd>10</dd><dt>moments called</dt></div>
+          <div><dd>2</dd><dt>goals anchored</dt></div>
+          <div><dd>100 s</dd><dt>of commentary</dt></div>
+          <div><dd>1</dd><dt>voice, end to end</dt></div>
+        </dl>
+      </div>
+
+      <div class="monitor" aria-label="Program monitor showing the ARG–FRA goal clip">
+        <div class="monitor-top"><b>PROGRAM</b><span>ARG–FRA / 2ND HALF</span><span class="right">REC 81:14</span></div>
+        <div class="screen">
+          <img src="../docs/goal_clip_contact.jpg" alt="Contact sheet of the 81st-minute France goal clip">
+          <div class="scorebug"><span class="team">ARG 2</span><span class="team">FRA 2</span><span class="time">81′</span></div>
+          <div class="lower">
+            <div class="tag">GOAL / FRANCE / 81′</div>
+            <div class="line">France make it <b>2–2</b> — the ground is up.</div>
+            <div class="meta">GPT-2 · grounded on score bug + tracker · voiced · Fish s2.1</div>
+          </div>
+        </div>
+        <div class="monitor-foot">
+          <span class="tick goal"></span><span class="tick"></span><span class="tick on"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span>
+          <span>10 MOMENTS / 100 S</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="console" id="console">
+    <div class="wrap">
+      <div class="now">
+        <div class="now-head">
+          <span class="kicker">Now calling</span>
+          <span class="source" id="sourceTag">GPT-2 / GROUNDED</span>
+        </div>
+        <blockquote id="nowLine">“France make it <em>2–2</em>. The ground is up.”</blockquote>
+        <div class="meta">
+          <span>MINUTE <b id="nowMinute">81′</b></span>
+          <span>SCORE <b>ARG 2–2 FRA</b></span>
+          <span>EVENT <b id="nowEvent">GOAL</b></span>
+          <span>VOICE <b>FISH S2.1</b></span>
+        </div>
+        <div class="wave" id="wave" aria-hidden="true"></div>
+      </div>
+      <div class="rundown">
+        <div class="rundown-head"><h2>The rundown</h2><span>click to cue</span></div>
+        <div class="moment-list" id="moments">
+          <button class="moment goal active" data-min="81′" data-event="GOAL" data-line="France make it 2–2. The ground is up.">
+            <span class="m-min">81′</span><span><span class="m-kind">Goal</span><span class="m-line">France make it 2–2. The ground is up.</span></span>
+          </button>
+          <button class="moment goal" data-min="80′" data-event="GOAL" data-line="France pull one back. 2–1, and the noise changes.">
+            <span class="m-min">80′</span><span><span class="m-kind">Goal</span><span class="m-line">France pull one back. 2–1, and the noise changes.</span></span>
+          </button>
+          <button class="moment" data-min="64′" data-event="PASS" data-line="Patient build-up from France. They are waiting for the gap.">
+            <span class="m-min">64′</span><span><span class="m-kind">Pass</span><span class="m-line">Patient build-up from France. They are waiting for the gap.</span></span>
+          </button>
+          <button class="moment" data-min="58′" data-event="CORNER" data-line="Argentina clear the first ball. France reload from the right.">
+            <span class="m-min">58′</span><span><span class="m-kind">Corner</span><span class="m-line">Argentina clear the first ball. France reload from the right.</span></span>
+          </button>
+          <button class="moment" data-min="51′" data-event="SHOT" data-line="A sight of goal for Argentina — blocked at the edge of the box.">
+            <span class="m-min">51′</span><span><span class="m-kind">Shot</span><span class="m-line">A sight of goal for Argentina — blocked at the edge of the box.</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id="pipeline">
+    <div class="section-head">
+      <h2>From video to voice.</h2>
+      <p>Five stages, one pass. Every stage hands the next a real output: a timestamp, a track, a fact, a line, a voice.</p>
+    </div>
+    <div class="stages">
+      <article class="stage"><div class="n">01 / SPOT</div><h3>Action spotting</h3><p>Score-bug OCR finds the goal; a motion-gated window scan proposes the rest.</p><div class="out">10 moments · 2 goals</div></article>
+      <article class="stage"><div class="n">02 / TRACK</div><h3>Tracking</h3><p>YOLO + ByteTrack follow players, referee and ball. Jersey colour splits the teams.</p><div class="out">22 tracks · possession</div></article>
+      <article class="stage"><div class="n">03 / GROUND</div><h3>Fact sheet</h3><p>Team, minute, score, ball zone and possession. Nothing is invented here.</p><div class="out">facts only</div></article>
+      <article class="stage"><div class="n">04 / CALL</div><h3>Commentary</h3><p>GPT-2 with LoRA writes the line; a validator checks team, score and event.</p><div class="out">validator-guarded</div></article>
+      <article class="stage"><div class="n">05 / VOICE</div><h3>Voice</h3><p>Fish Audio voices every line, placed on its timestamp under the crowd.</p><div class="out">10 / 10 voiced</div></article>
+    </div>
+  </section>
+
+  <section class="section wrap" id="api">
+    <div class="section-head">
+      <h2>Two ways in.</h2>
+      <p>The video pipeline sees the play. The API feed knows the event. Same language and voice stack behind both.</p>
+    </div>
+    <div class="split">
+      <article class="api-card">
+        <div class="kicker">API-FOOTBALL / LIVE-STYLE FEED</div>
+        <h3>LD Alajuelense 1–0 Perez Zeledon</h3>
+        <div class="score">90′ · A. HERNANDEZ · 1–0</div>
+        <blockquote>“Goal! A. Hernandez (LD Alajuelense) latches on to a precise pass inside the box and unleashes a shot into the left side of the goal. <b>The score is 1:0.</b>”</blockquote>
+        <div class="foot">Fed as structured facts · GPT-2 slot adapter · Fish voiced in 2.1 s</div>
+      </article>
+      <article class="reel" id="reel">
+        <div class="thumb">
+          <img src="../docs/goal_clip_contact.jpg" alt="Goal clip contact sheet">
+          <div class="play"><span>PLAY</span></div>
+        </div>
+        <div class="body">
+          <h3>The ARG–FRA reel</h3>
+          <p>Ten moments, ten seconds each. Both goals called from the score bug; every line voiced.</p>
+          <div class="tags"><span class="tag lime">10 × 10 s</span><span class="tag">2 goals</span><span class="tag">100 s</span><span class="tag">Fish s2.1</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cta-band">
+    <div class="wrap">
+      <h2>Call your match.</h2>
+      <p>Drop in any football video. Set the score and clock at the start. The pipeline runs locally.</p>
+      <a href="#top">RUN IT →</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><b>Matchcall</b> — built by Aryaman · 2026</span>
+    <span>Broadcast sample / A1 World Feed</span>
+  </div>
+</footer>
+
+<script>
+  const moments = Array.from(document.querySelectorAll('.moment'));
+  const nowLine = document.getElementById('nowLine');
+  const nowMinute = document.getElementById('nowMinute');
+  const nowEvent = document.getElementById('nowEvent');
+  const sourceTag = document.getElementById('sourceTag');
+  moments.forEach(btn => {
+    btn.addEventListener('click', () => {
+      moments.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      nowMinute.textContent = btn.dataset.min;
+      nowEvent.textContent = btn.dataset.event;
+      nowLine.textContent = '“' + btn.dataset.line + '”';
+      sourceTag.textContent = btn.dataset.event === 'GOAL' ? 'GPT-2 / GROUNDED' : 'GPT-2 / VALIDATED';
+    });
+  });
+
+  const wave = document.getElementById('wave');
+  for (let i = 0; i < 44; i++) {
+    const bar = document.createElement('i');
+    const h = 18 + Math.round(Math.abs(Math.sin(i * 1.7)) * 62);
+    bar.style.height = h + '%';
+    if (i % 7 === 0) bar.classList.add('hot');
+    wave.appendChild(bar);
+  }
+</script>
+</body>
+</html>
