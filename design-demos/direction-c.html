@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matchcall — Stadium Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;700;900&family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #050504;
+    --bg2: #0a0906;
+    --panel: #0e0d08;
+    --line: #2b2414;
+    --line2: #453819;
+    --amber: #ffb52e;
+    --amber-soft: #ffd27a;
+    --lime: #b9ff3d;
+    --red: #ff4a35;
+    --ink: #f4e9d2;
+    --ink2: #c8b995;
+    --muted: #82765e;
+    --dot: "Doto", "Share Tech Mono", monospace;
+    --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--cond); font-size: 16px; line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 80; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.22) 3px 4px);
+    opacity: .45;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 79; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.45) 100%);
+  }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  h1,h2,h3,p,dl,dd,figure,blockquote { margin: 0; }
+  :focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+  ::selection { background: var(--amber); color: #050504; }
+  .wrap { width: min(1260px, calc(100% - 56px)); margin-inline: auto; }
+  .mono { font-family: var(--mono); }
+
+  .stadium-top {
+    border-bottom: 1px solid var(--line);
+    background: #080705;
+  }
+  .stadium-top .wrap { min-height: 34px; display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .stadium-top .live { color: var(--red); display: inline-flex; align-items: center; gap: 6px; }
+  .stadium-top .live i { width: 6px; height: 6px; background: var(--red); border-radius: 50%; box-shadow: 0 0 9px var(--red); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .3 } }
+  .stadium-top .right { margin-left: auto; }
+
+  .board-head { padding-block: 26px 10px; text-align: center; }
+  .board-head .venue { font-family: var(--mono); font-size: 9px; letter-spacing: .24em; text-transform: uppercase; color: var(--amber); }
+  .board-head h1 {
+    font-family: var(--dot); font-size: clamp(3.4rem, 10vw, 9.4rem); font-weight: 900;
+    line-height: .82; letter-spacing: .02em; color: var(--amber);
+    text-shadow: 0 0 18px rgba(255,181,46,.35), 0 0 60px rgba(255,181,46,.12);
+    margin-top: 8px;
+  }
+  .board-head .sub { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; color: var(--muted); margin-top: 10px; }
+
+  .scoreboard {
+    margin-top: 10px; border: 1px solid var(--line2); background:
+      radial-gradient(700px 300px at 50% 30%, rgba(255,181,46,.06), transparent 70%),
+      #080705;
+    position: relative; overflow: hidden;
+  }
+  .scoreboard::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,181,46,.18) 1px, transparent 1px);
+    background-size: 5px 5px; opacity: .28;
+  }
+  .score-grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 20px; padding: 30px 26px 24px; position: relative; z-index: 1; }
+  .team-name { font-family: var(--dot); font-weight: 900; font-size: clamp(2.8rem, 7vw, 7rem); line-height: .85; color: var(--amber-soft); text-shadow: 0 0 20px rgba(255,181,46,.3); text-align: center; }
+  .team-name small { display: block; font-family: var(--mono); font-size: 8px; letter-spacing: .18em; color: var(--muted); text-shadow: none; margin-top: 8px; }
+  .big-score { font-family: var(--dot); font-weight: 900; font-size: clamp(4rem, 12vw, 11rem); line-height: .8; color: var(--lime); text-shadow: 0 0 24px rgba(185,255,61,.4); letter-spacing: .02em; white-space: nowrap; }
+  .big-score span { color: var(--muted); font-size: .45em; vertical-align: middle; }
+  .board-row { display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--line); padding: 9px 16px; position: relative; z-index: 1; font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+  .board-row b { color: var(--amber); font-weight: 500; }
+  .board-row .goal { color: var(--lime); margin-left: auto; }
+  .board-row .goal i { display: inline-block; width: 6px; height: 6px; background: var(--lime); border-radius: 50%; margin-right: 6px; box-shadow: 0 0 8px var(--lime); animation: pulse 1.2s infinite; }
+
+  .call-strip { display: grid; grid-template-columns: 1.25fr .75fr; border-bottom: 1px solid var(--line); }
+  .call-main { padding: 26px 28px 28px 0; border-right: 1px solid var(--line); }
+  .call-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--lime); }
+  .call-main blockquote { font-family: var(--cond); font-size: clamp(1.9rem, 4vw, 3.4rem); line-height: 1.0; font-weight: 600; margin-top: 10px; max-width: 26ch; }
+  .call-main blockquote em { color: var(--amber); font-style: normal; }
+  .call-main .meta { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 16px; text-transform: uppercase; letter-spacing: .08em; }
+  .call-main .meta b { color: var(--ink2); font-weight: 500; }
+  .meter { padding: 24px 0 20px 26px; display: flex; flex-direction: column; justify-content: center; }
+  .meter .label { font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .bars { display: flex; align-items: center; gap: 3px; height: 78px; margin-top: 10px; }
+  .bars i { flex: 1; background: var(--line2); height: 20%; display: block; }
+  .bars i.on { background: var(--amber); box-shadow: 0 0 8px rgba(255,181,46,.25); }
+  .meter .stamp { font-family: var(--mono); font-size: 9px; color: var(--amber); margin-top: 12px; }
+
+  .section { padding-block: 54px; }
+  .section-head { display: flex; align-items: end; gap: 24px; border-bottom: 1px solid var(--line2); padding-bottom: 10px; }
+  .section-head h2 { font-family: var(--cond); font-size: clamp(2rem, 4vw, 3.3rem); line-height: .9; font-weight: 800; text-transform: uppercase; letter-spacing: .01em; color: var(--amber-soft); }
+  .section-head p { margin-left: auto; max-width: 40ch; color: var(--muted); font-family: var(--mono); font-size: 9px; line-height: 1.6; letter-spacing: .04em; }
+  .log-grid { display: grid; grid-template-columns: 1fr 300px; gap: 0; border: 1px solid var(--line); border-top: 0; }
+  .terminal { padding: 20px; font-family: var(--mono); font-size: 11px; line-height: 1.8; background: #080705; }
+  .terminal .row { display: grid; grid-template-columns: 44px 64px 1fr; gap: 10px; padding: 4px 0; border-bottom: 1px solid #17140d; }
+  .terminal .t { color: var(--amber); }
+  .terminal .k { color: var(--lime); text-transform: uppercase; font-size: 9px; letter-spacing: .07em; }
+  .terminal .l { color: var(--ink2); }
+  .terminal .row.goal .k { color: var(--red); }
+  .rundown { border-left: 1px solid var(--line); padding: 16px; }
+  .rundown h3 { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); }
+  .rundown p { font-family: var(--mono); font-size: 8px; color: var(--muted); margin-top: 5px; }
+  .moment { width: 100%; display: grid; grid-template-columns: 36px 1fr; gap: 8px; text-align: left; padding: 8px 0; border-bottom: 1px solid #1a160e; }
+  .moment:hover .mline, .moment.active .mline { color: var(--amber); }
+  .moment .min { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  .moment .kind { display: block; font-family: var(--mono); font-size: 7px; letter-spacing: .12em; text-transform: uppercase; color: var(--lime); }
+  .moment.goal .kind { color: var(--red); }
+  .moment .mline { display: block; font-family: var(--mono); font-size: 9px; line-height: 1.4; color: var(--ink2); margin-top: 2px; }
+
+  .stages { display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .stage { background: #080705; padding: 18px 14px 20px; min-height: 170px; position: relative; }
+  .stage .n { font-family: var(--mono); font-size: 8px; letter-spacing: .14em; color: var(--lime); }
+  .stage h3 { font-family: var(--cond); font-size: 1.35rem; line-height: 1; font-weight: 700; margin-top: 10px; color: var(--amber-soft); text-transform: uppercase; }
+  .stage p { font-family: var(--mono); font-size: 9px; line-height: 1.5; color: var(--muted); margin-top: 8px; }
+  .stage .out { position: absolute; left: 14px; right: 14px; bottom: 12px; font-family: var(--mono); font-size: 8px; color: var(--lime); border-top: 1px solid var(--line); padding-top: 6px; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .api { border: 1px solid var(--line2); padding: 20px; background: linear-gradient(135deg, #100e08, #080705); }
+  .api .lab { font-family: var(--mono); font-size: 8px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); }
+  .api h3 { font-family: var(--dot); font-size: 2.2rem; line-height: .9; color: var(--amber-soft); margin-top: 8px; }
+  .api .score { font-family: var(--mono); font-size: 9px; color: var(--lime); margin-top: 5px; }
+  .api blockquote { font-family: var(--mono); font-size: 11px; line-height: 1.6; color: var(--ink2); margin-top: 14px; border-left: 2px solid var(--lime); padding-left: 12px; }
+  .api blockquote b { color: var(--lime); font-weight: 500; }
+  .reel { border: 1px solid var(--line); display: grid; grid-template-columns: 150px 1fr; background: #080705; }
+  .reel img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(.7) contrast(1.2) sepia(.2); }
+  .reel .body { padding: 16px; }
+  .reel h3 { font-family: var(--cond); font-size: 1.5rem; line-height: .95; color: var(--amber-soft); text-transform: uppercase; }
+  .reel p { font-family: var(--mono); font-size: 9px; line-height: 1.6; color: var(--muted); margin-top: 8px; }
+  .reel .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 12px; }
+  .reel .tags span { font-family: var(--mono); font-size: 7px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--line2); padding: 3px 5px; color: var(--lime); }
+
+  .cta { border-top: 1px solid var(--line2); border-bottom: 1px solid var(--line2); background: #0b0905; }
+  .cta .wrap { min-height: 110px; display: flex; align-items: center; gap: 20px; }
+  .cta h2 { font-family: var(--dot); font-size: clamp(1.8rem, 4vw, 3.2rem); line-height: .9; color: var(--amber); text-shadow: 0 0 18px rgba(255,181,46,.25); }
+  .cta p { margin-left: auto; max-width: 34ch; font-family: var(--mono); font-size: 9px; line-height: 1.6; color: var(--muted); }
+  .cta a { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; border: 1px solid var(--lime); color: var(--lime); padding: 10px 14px; text-decoration: none; }
+  .cta a:hover { background: var(--lime); color: #050504; }
+
+  footer { padding-block: 18px 34px; font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  footer b { color: var(--ink2); font-weight: 500; }
+
+  @media (max-width: 960px) {
+    .call-strip { grid-template-columns: 1fr; }
+    .call-main { border-right: 0; border-bottom: 1px solid var(--line); padding-right: 0; }
+    .meter { padding-left: 0; }
+    .log-grid { grid-template-columns: 1fr; }
+    .rundown { border-left: 0; border-top: 1px solid var(--line); }
+    .stages { grid-template-columns: repeat(3,1fr); }
+    .two { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    .wrap { width: calc(100% - 32px); }
+    .stadium-top .wrap > span:nth-child(2), .stadium-top .right { display: none; }
+    .score-grid { grid-template-columns: 1fr auto 1fr; padding: 22px 12px 18px; gap: 8px; }
+    .team-name { font-size: clamp(1.8rem, 8vw, 3.2rem); }
+    .big-score { font-size: clamp(3rem, 18vw, 5.8rem); }
+    .board-head h1 { font-size: clamp(2.7rem, 15vw, 4.8rem); }
+    .stages { grid-template-columns: 1fr 1fr; }
+    .stage { min-height: 150px; }
+    .terminal .row { grid-template-columns: 36px 52px 1fr; gap: 6px; font-size: 9px; }
+    .reel { grid-template-columns: 1fr; }
+    .cta .wrap { flex-wrap: wrap; padding-block: 20px; }
+    .cta p { margin-left: 0; }
+  }
+  /* readability floor for the design sample */
+  .stadium-top, .board-head .venue, .board-head .sub, .board-row, .call-tag,
+  .call-main .meta, .meter .label, .meter .stamp, .section-head p,
+  .terminal .k, .rundown h3, .rundown p, .moment .min, .moment .kind,
+  .stage .n, .stage .out, .api .lab, .api .score, .reel .tags span,
+  .cta p, footer, .team-name small { font-size: 12px; }
+  .stadium-top .wrap, .board-head .venue, .section-head p,
+  .board-head .sub, .api .lab { font-size: 14px; }
+  .api .score, .cta p { font-size: 14px; }
+  .terminal, .terminal .l, .moment .mline, .stage p,
+  .api blockquote, .reel p { font-size: 14px; line-height: 1.55; }
+  .cta p { color: #b9ab89; }
+  .stage { min-height: 210px; }
+</style>
+</head>
+<body>
+
+<div class="stadium-top">
+  <div class="wrap">
+    <span class="live"><i></i>PLAY-BY-PLAY</span>
+    <span>MATCHCALL STADIUM · LUSAIL</span>
+    <span class="right">81:14 / SECOND HALF / ARG 2–2 FRA</span>
+  </div>
+</div>
+
+<header class="board-head wrap">
+  <div class="venue">The commentary board / ARG–FRA / 30 October 2026</div>
+  <h1>MATCHCALL</h1>
+  <div class="sub">Every goal, called the moment it lands · 10 moments · 100 seconds · one voice</div>
+</header>
+
+<main>
+  <section class="scoreboard wrap" aria-label="Scoreboard">
+    <div class="score-grid">
+      <div class="team-name">ARG<small>ARGENTINA / HOME</small></div>
+      <div class="big-score">2<span>–</span>2</div>
+      <div class="team-name">FRA<small>FRANCE / AWAY</small></div>
+    </div>
+    <div class="board-row"><span>SECOND HALF</span><b>81:14</b><span>POSSESSION 48 / 52</span><span class="goal"><i></i>GOAL · FRANCE</span></div>
+  </section>
+
+  <section class="call-strip wrap">
+    <div class="call-main">
+      <div class="call-tag">Now calling / 81′ / goal</div>
+      <blockquote id="callLine">“France make it <em>2–2</em>. The ground is up.”</blockquote>
+      <div class="meta"><span>MINUTE <b id="callMinute">81′</b></span><span>SCORE <b>2–2</b></span><span>VOICE <b>FISH S2.1</b></span><span>MODE <b>GROUNDED</b></span></div>
+    </div>
+    <div class="meter">
+      <div class="label">Commentary bus / live</div>
+      <div class="bars" id="bars" aria-hidden="true"></div>
+      <div class="stamp" id="meterStamp">ON AIR · 81′ · GOAL</div>
+    </div>
+  </section>
+
+  <section class="section wrap" id="log">
+    <div class="section-head"><h2>The play-by-play</h2><p>One line per moment. Click a moment in the rundown; the board follows.</p></div>
+    <div class="log-grid">
+      <div class="terminal" id="terminal">
+        <div class="row goal"><span class="t">81′</span><span class="k">GOAL</span><span class="l">France make it 2–2. The ground is up.</span></div>
+        <div class="row goal"><span class="t">80′</span><span class="k">GOAL</span><span class="l">France pull one back. 2–1, and the noise changes.</span></div>
+        <div class="row"><span class="t">64′</span><span class="k">PASS</span><span class="l">Patient build-up from France. They are waiting for the gap.</span></div>
+        <div class="row"><span class="t">58′</span><span class="k">CORNER</span><span class="l">Argentina clear the first ball. France reload from the right.</span></div>
+        <div class="row"><span class="t">51′</span><span class="k">SHOT</span><span class="l">A sight of goal for Argentina — blocked at the edge of the box.</span></div>
+        <div class="row"><span class="t">44′</span><span class="k">PASS</span><span class="l">France keep the ball. The tempo drops a beat.</span></div>
+      </div>
+      <aside class="rundown">
+        <h3>The rundown</h3>
+        <p>click to cue</p>
+        <button class="moment goal active" data-min="81′" data-event="GOAL" data-line="France make it 2–2. The ground is up.">
+          <span class="min">81′</span><span><span class="kind">Goal</span><span class="mline">France make it 2–2. The ground is up.</span></span>
+        </button>
+        <button class="moment goal" data-min="80′" data-event="GOAL" data-line="France pull one back. 2–1, and the noise changes.">
+          <span class="min">80′</span><span><span class="kind">Goal</span><span class="mline">France pull one back. 2–1, and the noise changes.</span></span>
+        </button>
+        <button class="moment" data-min="64′" data-event="PASS" data-line="Patient build-up from France. They are waiting for the gap.">
+          <span class="min">64′</span><span><span class="kind">Pass</span><span class="mline">Patient build-up from France. They are waiting for the gap.</span></span>
+        </button>
+        <button class="moment" data-min="58′" data-event="CORNER" data-line="Argentina clear the first ball. France reload from the right.">
+          <span class="min">58′</span><span><span class="kind">Corner</span><span class="mline">Argentina clear the first ball. France reload from the right.</span></span>
+        </button>
+        <button class="moment" data-min="51′" data-event="SHOT" data-line="A sight of goal for Argentina — blocked at the edge of the box.">
+          <span class="min">51′</span><span><span class="kind">Shot</span><span class="mline">A sight of goal for Argentina — blocked at the edge of the box.</span></span>
+        </button>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section wrap" id="system">
+    <div class="section-head"><h2>Under the board</h2><p>Five stages. The score bug anchors the goal; the tracker reads the play; the model writes; the voice lands.</p></div>
+    <div class="stages">
+      <article class="stage"><div class="n">01 / SPOT</div><h3>Action spotting</h3><p>Score-bug OCR and a motion-gated window scan.</p><div class="out">10 moments · 2 goals</div></article>
+      <article class="stage"><div class="n">02 / TRACK</div><h3>Tracking</h3><p>YOLO + ByteTrack; jersey colour splits the teams.</p><div class="out">players · ball · teams</div></article>
+      <article class="stage"><div class="n">03 / GROUND</div><h3>Fact sheet</h3><p>Team, minute, score, ball zone, possession.</p><div class="out">facts only</div></article>
+      <article class="stage"><div class="n">04 / CALL</div><h3>Commentary</h3><p>GPT-2 + LoRA, checked against the sheet.</p><div class="out">validator-guarded</div></article>
+      <article class="stage"><div class="n">05 / VOICE</div><h3>Voice</h3><p>Fish Audio on the timestamp, under the crowd.</p><div class="out">10 / 10 voiced</div></article>
+    </div>
+  </section>
+
+  <section class="section wrap" id="api">
+    <div class="section-head"><h2>Another feed</h2><p>The video sees the play. The API knows the event. Same voice behind both.</p></div>
+    <div class="two">
+      <article class="api">
+        <div class="lab">API-Football / live-style feed</div>
+        <h3>ALA 1–0 PER</h3>
+        <div class="score">90′ · A. HERNANDEZ · SCORE 1–0</div>
+        <blockquote>“Goal! A. Hernandez (LD Alajuelense) latches on to a precise pass inside the box and unleashes a shot into the left side of the goal. <b>The score is 1:0.</b>”</blockquote>
+      </article>
+      <article class="reel">
+        <img src="../docs/goal_clip_contact.jpg" alt="Goal clip contact sheet">
+        <div class="body">
+          <h3>The reel</h3>
+          <p>Ten moments, ten seconds each. Both goals called from the score bug; every line voiced.</p>
+          <div class="tags"><span>10 × 10 s</span><span>2 goals</span><span>100 s</span><span>Fish s2.1</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <h2>CALL YOUR MATCH.</h2>
+      <p>Drop in any football video. Set the score and clock at the start. The board follows.</p>
+      <a href="#top">RUN THE PIPELINE</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap"><span><b>Matchcall</b> — stadium board sample / C1</span><span>Real data · no lorem ipsum</span></div>
+</footer>
+
+<script>
+  const moments = Array.from(document.querySelectorAll('.moment'));
+  const callLine = document.getElementById('callLine');
+  const callMinute = document.getElementById('callMinute');
+  const meterStamp = document.getElementById('meterStamp');
+  moments.forEach(btn => {
+    btn.addEventListener('click', () => {
+      moments.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      callMinute.textContent = btn.dataset.min;
+      callLine.textContent = '“' + btn.dataset.line + '”';
+      meterStamp.textContent = 'ON AIR · ' + btn.dataset.min + ' · ' + btn.dataset.event;
+    });
+  });
+
+  const bars = document.getElementById('bars');
+  for (let i = 0; i < 40; i++) {
+    const bar = document.createElement('i');
+    const h = 16 + Math.round(Math.abs(Math.sin(i * 1.37)) * 74);
+    bar.style.height = h + '%';
+    if (i % 5 === 0) bar.classList.add('on');
+    bars.appendChild(bar);
+  }
+</script>
+</body>
+</html>
