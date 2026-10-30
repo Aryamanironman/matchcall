@@ -26,6 +26,15 @@ MODELS = settings.models_dir
 OUT = settings.out_root
 YOLO_ROOT = MODELS / "aryaman_yolo"
 YOLO_RUN = YOLO_ROOT / "aryaman_yolov5lu_football"
+_MAIN_MODELS = Path(__file__).resolve().parents[4] / "models"
+_YOLO26_CANDIDATES = [
+    MODELS / "yolo26" / "yolo26n_v1_640",
+    _MAIN_MODELS / "yolo26" / "yolo26n_v1_640",
+]
+YOLO26_RUN = next((p for p in _YOLO26_CANDIDATES if p.exists()),
+                  _YOLO26_CANDIDATES[0])
+YOLO26_DATASET = YOLO26_RUN.parent / f"{YOLO26_RUN.name}_dataset.json"
+YOLO26_CLEARML = YOLO26_RUN / "clearml_task.json"
 # The original run wrote train.log; the resumed run appends to
 # train_resume.log. Follow whichever was written last so a live run never
 # reads as "stalled".
@@ -223,6 +232,83 @@ def yolo_status() -> dict:
     }
 
 
+def yolo26_status() -> dict:
+    """Completed local YOLO26n run, used by the live training card."""
+    rows: list[dict] = []
+    csv_path = YOLO26_RUN / "results.csv"
+    if csv_path.exists():
+        try:
+            with csv_path.open(encoding="utf-8", newline="") as f:
+                for r in csv.DictReader(f):
+                    rows.append({
+                        "epoch": int(float(r["epoch"])),
+                        "box_loss": _num(r, "train/box_loss"),
+                        "cls_loss": _num(r, "train/cls_loss"),
+                        "dfl_loss": _num(r, "train/l1_loss"),
+                        "precision": _num(r, "metrics/precision(B)"),
+                        "recall": _num(r, "metrics/recall(B)"),
+                        "mAP50": _num(r, "metrics/mAP50(B)"),
+                        "mAP50_95": _num(r, "metrics/mAP50-95(B)"),
+                        "val_box_loss": _num(r, "val/box_loss"),
+                        "val_cls_loss": _num(r, "val/cls_loss"),
+                        "val_dfl_loss": _num(r, "val/l1_loss"),
+                    })
+        except (OSError, ValueError):
+            rows = []
+
+    args = _yaml(YOLO26_RUN / "args.yaml")
+    total = int(args.get("epochs") or 50)
+    best = max(rows, key=lambda r: r["mAP50_95"] or -1) if rows else None
+    last = rows[-1] if rows else None
+    vm = _json(YOLO26_RUN / "val_metrics.json") or {}
+    best_metrics = {
+        "epoch": best["epoch"] if best else None,
+        "precision": vm.get("precision", best["precision"] if best else None),
+        "recall": vm.get("recall", best["recall"] if best else None),
+        "mAP50": vm.get("mAP50", best["mAP50"] if best else None),
+        "mAP50_95": vm.get("mAP50_95", best["mAP50_95"] if best else None),
+    }
+    best_pt = YOLO26_RUN / "weights" / "best.pt"
+    ds = _json(YOLO26_DATASET) or {}
+    task = _json(YOLO26_CLEARML) or {}
+    done = bool(vm) or (rows and len(rows) >= total) or best_pt.exists()
+    assets = {n: f"/api/training/asset/{n}" for n in sorted(ASSETS)
+              if (YOLO26_RUN / n).exists()}
+    return {
+        "status": "done" if done else ("running" if rows else "not-found"),
+        "paused": None,
+        "task_url": task.get("url") or PROJECT_URL,
+        "project_url": PROJECT_URL,
+        "run_dir": str(YOLO26_RUN),
+        "model": str(args.get("model") or "yolo26n.pt"),
+        "architecture": "YOLO26n (Ultralytics, NMS-free head)",
+        "epochs_total": total,
+        "epochs_done": len(rows),
+        "current_epoch": len(rows),
+        "progress": 1.0 if done else (len(rows) / total if total else 0.0),
+        "best_epoch": best["epoch"] if best else None,
+        "best_metrics": best_metrics,
+        "last_metrics": last,
+        "rows": rows,
+        "weights_ready": best_pt.exists(),
+        "weights_bytes": best_pt.stat().st_size if best_pt.exists() else 0,
+        "dataset": {
+            "name": "Roboflow football-players V1",
+            "classes": ds.get("classes") or ["Player", "Ball", "Referee"],
+            "train": ds.get("train_images"),
+            "val": ds.get("val_images"),
+            "source": str(YOLO26_DATASET),
+        },
+        "args": {k: args.get(k) for k in
+                 ("model", "epochs", "batch", "imgsz", "patience", "device",
+                  "optimizer", "seed") if k in args},
+        "assets": assets,
+        "log_tail": "",
+        "err_tail": "",
+        "updated": csv_path.stat().st_mtime if csv_path.exists() else None,
+    }
+
+
 def llm_status() -> dict:
     state = _json(LLM_STATE) or {}
     hist = [{"step": h.get("step"), "epoch": h.get("epoch"),
@@ -390,7 +476,8 @@ def training_bundle() -> dict:
     snap.setdefault("tasks", [])
     snap.setdefault("models", [])
     return {
-        "yolo": yolo_status(),
+        "yolo": yolo26_status(),
+        "yolo_legacy": yolo_status(),
         "llm": llm_status(),
         "demo": demo_status(),
         "tracking": tracking_status(),
