@@ -427,7 +427,7 @@ def build(log):
 
     page_number(section.footer.paragraphs[0])
 
-    name = f"Week_{log['week']:02d}_Progress_Log.docx"
+    name = f"week{log['week']}-log-sharma-aryaman.docx"
     doc.save(OUT / name)
     print("wrote", OUT / name)
 
