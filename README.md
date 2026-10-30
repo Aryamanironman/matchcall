@@ -85,15 +85,15 @@ answer for this feed.
 
 ### GPT-2 LoRA
 
-`models/gpt2_lora_v3/` is trained on a grounded corpus
-(`scripts/build_commentary_corpus.py`, 6k examples) with completion-only loss,
-so the adapter learns the `[EVENT] -> [COMMENTARY]` mapping rather than the
-deterministic history tokens. Retrain with:
+`models/gpt2_lora_v4/` is trained on team-grounded SoccerReplay-1988 commentary
+with completion-only loss. `models/gpt2_lora_v5/` uses the API-slot prompt and
+adds the goal-decode guardrails (beam search, contradiction/score suppression,
+and a validator that checks both colon and hyphen scores). Retrain with:
 
 ```powershell
-.venv\Scripts\python scripts\build_commentary_corpus.py --limit 6000
+.venv\Scripts\python scripts\build_commentary_corpus.py
 .venv\Scripts\python scripts\train_commentator_lora.py `
-  --data data\commentator_train_v2.jsonl --out models\gpt2_lora_v3 --epochs 3
+  --data data\commentator_train_v4.jsonl --out models\gpt2_lora_v4 --epochs 3
 ```
 
 ### Fish Audio
@@ -101,7 +101,7 @@ deterministic history tokens. Retrain with:
 Put a real key in `.env`:
 
 ```
-FISH_API_KEY=sk-fish-...
+FISH_API_KEY=<your-key>
 FISH_MODEL=s2.1-pro-free
 FISH_VOICE_ID=40f53434437e46a5bcbb5abb39f5079c
 ```
@@ -109,8 +109,6 @@ FISH_VOICE_ID=40f53434437e46a5bcbb5abb39f5079c
 `***` is treated as missing; the pipeline falls back to edge-tts and says so.
 As soon as the key is set, re-run the reel to re-voice every line with
 `s2.1-pro-free` — no other change.
-
-## Aryaman YOLOv5lu detector (product model)
 
 ## YOLO26n detector (product model)
 
