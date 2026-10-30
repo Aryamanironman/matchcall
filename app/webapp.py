@@ -321,10 +321,11 @@ async def training_asset(name: str):
     from app import training_status
     if name not in training_status.ASSETS:
         raise HTTPException(404, "unknown asset")
-    target = training_status.YOLO_RUN / name
-    if not target.exists():
-        raise HTTPException(404)
-    return FileResponse(target)
+    for root in (training_status.YOLO26_RUN, training_status.YOLO_RUN):
+        target = root / name
+        if target.exists():
+            return FileResponse(target)
+    raise HTTPException(404)
 
 
 @app.get("/media/{path:path}")

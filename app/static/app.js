@@ -327,10 +327,10 @@ function renderTraining(d) {
     : state === 'running' ? `epoch ${epoch}/${total}`
     : 'starting';
   const statusText = $('#statusText');
-  if (statusText) statusText.textContent = `Fish s2.1-pro-free · YOLOv5lu ${label}`;
+  if (statusText) statusText.textContent = `Fish s2.1-pro-free · YOLO26n ${label}`;
   const statusDot = $('#statusDot');
   if (statusDot) statusDot.className = 'dot ' + (state === 'done' ? '' : running ? 'live' : 'warn');
-  $('#trainStatus').textContent = `YOLOv5lu ${label} · GPT-2 LoRA v4 done${l.final_loss != null ? ' · loss ' + l.final_loss : ''}`;
+  $('#trainStatus').textContent = `YOLO26n ${label} · GPT-2 LoRA v4/v5 done${l.final_loss != null ? ' · loss ' + l.final_loss : ''}`;
 
   const badge = $('#yoloBadge');
   badge.textContent = state === 'done' ? 'complete'
