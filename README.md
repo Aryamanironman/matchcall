@@ -15,6 +15,10 @@ video ─▶ action spotting (score-bug OCR + motion-gated window scan)
 
 Events detected: **goal, shot, tackle, pass, corner, dead_time**.
 
+![Matchcall Stadium Board demo](design-demos/screenshots/live-1440-full.png)
+
+*The live Stadium Board UI: pipeline → ARG–FRA match board → API-Football feed → upload/match plan → training.*
+
 - **Project report:** [`docs/Matchcall_Project_Report.docx`](docs/Matchcall_Project_Report.docx)
 - **Research sample:** [`docs/Matchcall_sample_v3.docx`](docs/Matchcall_sample_v3.docx)
 - **Presentation runbook:** [`docs/presentation_runbook.md`](docs/presentation_runbook.md)
