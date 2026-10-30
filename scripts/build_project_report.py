@@ -79,9 +79,9 @@ title_p.clear()
 title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 for label, value, brk in (
         ("Project Title: ", "Matchcall — A Fact-Grounded, Low-Cost Pipeline for Spoken Football Commentary", True),
-        ("Student Name: ", "Aryaman", True),
-        ("Student ID: ", "________________________", True),
-        ("Supervisor Name: ", "Nabin Sir", False)):
+        ("Student Name: ", "Aryaman Sharma", True),
+        ("Student ID: ", "25158763", True),
+        ("Supervisor Name: ", "Prof. Nabin Sharma", False)):
     r = title_p.add_run(label)
     r.bold = True
     title_p.add_run(value)
@@ -812,9 +812,9 @@ add_table(["Item", "Status", "Note"], [
 
 doc.core_properties.title = ("Matchcall: A Fact-Grounded, Low-Cost Pipeline for Spoken Football "
                              "Commentary")
-doc.core_properties.author = "Aryaman"
+doc.core_properties.author = "Aryaman Sharma"
 doc.core_properties.subject = "AI/Data Analytics Capstone Project"
-doc.core_properties.comments = "Built from the UTS project report template."
+doc.core_properties.comments = "Built from the UTS project report template; supervisor: Prof. Nabin Sharma."
 
 doc.save(str(OUT))
 print("wrote", OUT, OUT.stat().st_size)
