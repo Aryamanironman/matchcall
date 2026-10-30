@@ -23,7 +23,6 @@ Events detected: **goal, shot, tackle, pass, corner, dead_time**.
 - **Research sample:** [`docs/Matchcall_sample_v3.docx`](docs/Matchcall_sample_v3.docx)
 - **Presentation runbook:** [`docs/presentation_runbook.md`](docs/presentation_runbook.md)
 - **Code walkthrough:** [`docs/code_walkthrough.md`](docs/code_walkthrough.md)
-- **Weekly capstone logs:** [`docs/capstone_logs_final/`](docs/capstone_logs_final/)
 - **ClearML project:** [Football Commentator](https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8)
 
 ## Web demo
