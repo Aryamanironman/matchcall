@@ -29,6 +29,8 @@ def load(path: Path):
 
 AI = load(REPO / "output" / "comparison" / "commentary_comparison.json")
 EV = load(REPO / "output" / "experiments" / "event_spotting.json")
+_BOOT_PATH = REPO / "output" / "comparison" / "commentary_bootstrap.json"
+BOOT = load(_BOOT_PATH) if _BOOT_PATH.exists() else None
 M = AI["metrics"]
 
 doc = Document()
@@ -482,7 +484,9 @@ P("The event layer combines three signals. A score-bug reader samples the two sc
   "events, and a ResNet-18 classifier assigns one of five labels (goal, shot, pass, tackle, dead "
   "time); crowd-audio rise and ball speed refine the goal/shot decision. The score-bug anchor is "
   "treated as gold for goals: it is placed a few seconds before the digit flip because the broadcast "
-  "updates after the ball crosses the line.")
+  "updates after the ball crosses the line. The ResNet-18 classifier is trained with weak supervision "
+  "on auto-labelled windows from the processed video; its stored validation accuracy is therefore a "
+  "property of that weak-label split, not an event-spotting benchmark.")
 doc.add_heading("3.3 Tracking, teams and facts", level=2)
 P("YOLO26n detects players, the ball and the referee in each scheduled frame; ByteTrack maintains "
   "identities across frames [3], [21]. Jersey colours are clustered with KMeans into two teams, and "
@@ -586,6 +590,22 @@ add_table(
 add_figure(FIG / "fig2_commentary.png", 2,
            "GPT-2 v4 is closer to human overlap and length than the template baseline. BLEU-4 is "
            "omitted because it is near zero for both systems; exact values are in Table 2.", width=6.2)
+if BOOT:
+    b = {r["metric"]: r for r in BOOT.get("rows", [])}
+    def _ci(key):
+        r = b[key]
+        p = r["p_bootstrap"]
+        ptxt = "p < 0.001" if p == 0 else f"p = {p:.3f}"
+        return (f"{r['difference']:+.4f} "
+                f"[{r['ci95_low']:+.4f}, {r['ci95_high']:+.4f}], {ptxt}")
+    P(f"A paired percentile bootstrap over the same {BOOT['n']} prompts "
+      f"({BOOT['resamples']} resamples, seed {BOOT['seed']}) puts confidence intervals around the "
+      f"differences. ROUGE-L improves by {_ci('rougeL')}; METEOR by {_ci('meteor')}; BLEU-1 by "
+      f"{_ci('bleu1')}. The intervals exclude zero for these three metrics. BLEU-2 is not "
+      f"distinguishable ({_ci('bleu2')}) and BLEU-4 is also not distinguishable "
+      f"({_ci('bleu4')}); both are near zero. This makes the overlap advantage a measured claim "
+      "rather than a point estimate, but it is still automatic-metric evidence, not a human "
+      "preference result.")
 P("Table 3 quotes three held-out records to show what the aggregate scores hide. In the first, "
   "GPT-2 names the correct team and produces a human-length line, but invents a shot that the "
   "reference does not contain. In the second, both GPT-2 and the template attribute the corner to "
@@ -812,7 +832,8 @@ BP("Why the overlay matters.", "The same numbers in the overlay become the fact 
 BP("What the overlay does not solve.", "Broadcast cuts, close-ups and crowd shots break the ball "
    "path, and similar kits can confuse the jersey clusters. Possession is therefore an estimate, not "
    "a tracking ground truth. The pipeline marks interpolated gaps and never treats a missing ball as "
-   "a fact.")
+   "a fact. The two figures are qualitative illustrations, not a tracking evaluation: we do not "
+   "report MOTA, IDF1 or possession accuracy, which would require frame-level ground truth.")
 
 doc.add_heading("5.7 Commercialisation and cost advantage", level=2)
 P("The measured cost is the commercial opening. A 64.5-minute match costs about $0.392 on a cloud "
@@ -860,6 +881,21 @@ P("The commercial moat is not the language model. It is the auditable fact layer
   "needs human review, and rights and league data licences are commercial prerequisites. A credible "
   "first market is lower-league and highlights automation, where the alternative is no commentary at "
   "all; live top-flight commentary is a later, harder market.")
+
+doc.add_heading("5.8 Protocol for a human evaluation (not run)", level=2)
+P("Automatic overlap metrics cannot establish whether commentary is accurate, natural or suitable "
+  "for broadcast. We therefore specify the human evaluation that a publication of this system should "
+  "include, and state plainly that it was not run for this paper. The protocol is a stratified sample "
+  "of 60 generated lines: 20 goals, 20 shots and 20 non-goal passages, drawn from held-out matches. "
+  "Three raters with football-viewing experience score each line blind to its source on three "
+  "five-point scales: factual correctness, naturalness and broadcast suitability. Source order is "
+  "randomised and the template/GPT-2 labels are hidden.")
+P("The primary outcome is the mean factual-correctness score with a bootstrap confidence interval; "
+  "secondary outcomes are naturalness and broadcast suitability. Agreement is reported with "
+  "Krippendorff's alpha. A pilot of 60 lines is enough to estimate variance and detect a one-point "
+  "difference under a paired design, but it is not a substitute for a powered study. We report this "
+  "protocol so the absence of a human result is visible rather than hidden behind BLEU, ROUGE and "
+  "METEOR.")
 
 # ---------------------------------------------------------------- 6 discussion
 doc.add_heading("6. Discussion", level=1)
