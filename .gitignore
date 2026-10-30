@@ -5,6 +5,8 @@ output/
 data/V1.zip
 data/roboflow-mirror/
 models/
+weights/
+*.pt
 
 # large/runtime artifacts
 output_match_*/
@@ -17,6 +19,8 @@ _probe_*
 work/
 *.part
 *.ytdl
+docs/~$*
+docs/report_pages/
 
 # gated SoccerReplay-1988 source and derived corpora (CC-BY-NC-SA)
 data/soccerreplay/

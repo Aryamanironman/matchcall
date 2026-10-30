@@ -1,27 +1,45 @@
-# Football Commentary Dubber
+# Matchcall
 
 AI play-by-play commentary over real football footage. Drop in a broadcast MP4,
 get back the same clip with an energetic commentator dubbed on top — or a
 10-second-per-moment commented highlights reel.
 
 ```
-video ─▶ action spotting (score-bug OCR + YOLO/ResNet)
-      ─▶ 10 s key-action clips
-      ─▶ FootballVision tracking (yolov5su + ByteTrack + team possession)
-      ─▶ grounded action description
-      ─▶ GPT-2 LoRA commentary (validated, template fallback)
+video ─▶ action spotting (score-bug OCR + motion-gated window scan)
+      ─▶ YOLO26n + ByteTrack + team/possession facts
+      ─▶ deterministic fact sheet
+      ─▶ GPT-2 LoRA commentary (validator + grounded template safety net)
       ─▶ Fish Audio s2.1-pro-free / edge-tts
       ─▶ commented highlights reel
 ```
 
 Events detected: **goal, shot, tackle, pass, corner, dead_time**.
 
+- **Project report:** [`docs/Matchcall_Project_Report.docx`](docs/Matchcall_Project_Report.docx)
+- **Research sample:** [`docs/Matchcall_sample_v3.docx`](docs/Matchcall_sample_v3.docx)
+- **Presentation runbook:** [`docs/presentation_runbook.md`](docs/presentation_runbook.md)
+- **Code walkthrough:** [`docs/code_walkthrough.md`](docs/code_walkthrough.md)
+
+## Web demo
+
+The current UI is the Stadium Board: pipeline, ARG–FRA match board, API-Football
+feed, upload/match plan, then training/ClearML.
+
+```powershell
+.venv\Scripts\python -m uvicorn app.webapp:app --host 127.0.0.1 --port 8100
+# open http://127.0.0.1:8100
+```
+
+The upload accepts a video and a match-plan document. JSON plans are parsed in
+the browser for teams, venue, score, minute, players and positions; the backend
+plan parser is the next implementation step.
+
 ## Commented highlights (the 5-stage pipeline)
 
 ```powershell
 # ARG-FRA 2022 second half; score is 2-0 at t=0 and the broadcast clock is 34:38
 .venv\Scripts\python scripts\make_commented_highlights.py `
-  --video "C:\Users\asus\Downloads\3 - 3 ARG vs FRA - Second-Half - Bein.mp4" `
+  --video "path\to\ARG-FRA.mp4" `
   --home Argentina --away France `
   --start-score-home 2 --start-score-away 0 --minute-offset 35.33
 ```
@@ -40,15 +58,14 @@ Stages map to the code:
 
 1. **Action spotting** — `app/vision/score_flip.py` (score-bug digit-shape
    transitions with a verified per-feed cache) and `app/vision/analyze.py`
-   (project YOLO + ResNet window scan).
-2. **Tracking / visual enrichment** — `app/vision/fv_tracker.py` uses the
-   FootballVision checkpoint (`models/footballvision/yolov5su_best.pt`) with
-   ultralytics ByteTrack, KMeans jersey-colour teams and ball possession.
+   (motion-gated YOLO window scan plus a weak-supervised ResNet-18 classifier).
+2. **Tracking / visual enrichment** — `app/vision/fv_tracker.py` uses YOLO26n
+   with ultralytics ByteTrack, KMeans jersey-colour teams and ball possession.
 3. **Action description** — grounded facts (team, minute, score, possession,
    ball zone, tracked players) built in `scripts/make_commented_highlights.py`.
 4. **Textual commentary** — `app/commentary_gpt2.py` (LoRA) with a validator
-   that rejects invented teams, scores, cards or player names; templates are
-   the per-line fallback.
+   that rejects invented teams, scores, cards or player names; a grounded
+   template is the safety net.
 5. **Audio commentary** — `app/tts.py` (Fish Audio `s2.1-pro-free` when
    `FISH_API_KEY` is real, edge-tts otherwise).
 
@@ -95,21 +112,23 @@ As soon as the key is set, re-run the reel to re-voice every line with
 
 ## Aryaman YOLOv5lu detector (product model)
 
-The FootballVision repo's improved detection is **YOLOv5lu** (large;
-`main.py` loads `models/yolov5lu/best.pt`) plus **YOLOv8x** for pitch
-keypoints — it does **not** use YOLO26. Train Aryaman's detector on the full
-V1 export (8,677 train / 2,996 val, 3 classes):
+## YOLO26n detector (product model)
+
+The current detector is **YOLO26n**, fine-tuned on the V1 football export
+(8,677 train / 2,996 val; Player, Ball, Referee):
 
 ```powershell
-.venv\Scripts\python scripts\train_aryaman_yolov5.py
+.venv\Scripts\python scripts\train_yolo26.py --epochs 50 --imgsz 640 --batch 16 --clearml
 ```
 
-- Base: `yolov5lu.pt` (the repo's detection architecture)
-- Output: `models/aryaman_yolo/aryaman_yolov5lu_football/weights/best.pt`
-- ClearML: project **Football Commentator**, task **Aryaman YOLOv5lu football
-  detector — V1 fine-tune**, dataset artifact + live metrics/plots + registered
-  output model `aryaman-yolov5lu-football`
-- `app/vision/fv_tracker.py` prefers the Aryaman checkpoint once it exists
+- Base: `weights/yolo26n.pt`
+- Output: `models/yolo26/yolo26n_v1_640/weights/best.pt`
+- ClearML: project **Football Commentator**, task **Aryaman YOLO26n football
+  detector — V1 fine-tune**, metrics/plots + registered output model
+- Set `FC_DETECTOR_WEIGHTS=models\yolo26\yolo26n_v1_640\weights\best.pt` to use
+  it for uploads; otherwise the default detector path is used.
+- The older YOLOv5lu run is kept only as a descriptive comparison; the two runs
+  did not receive equal epochs or parameter budgets.
 
 ## Full-match dub
 
@@ -118,10 +137,9 @@ V1 export (8,677 train / 2,996 val, 3 classes):
   --score-home 2 --score-away 0 --minute-offset 35.33
 ```
 
-The whole-match action-spotting pass uses the project YOLOv8 model by default
-(fast). Set `FC_DETECTOR=footballvision` to use the FootballVision checkpoint
-for the full scan too; the highlights script always uses FootballVision for
-the 10-second clip tracking.
+The whole-match action-spotting pass uses the configured detector. Set
+`FC_DETECTOR_WEIGHTS` to the YOLO26n checkpoint for the current model; the
+highlights script uses the same detector for the 10-second clip tracking.
 
 
 ## Setup (Windows, CUDA GPU)
@@ -129,51 +147,53 @@ the 10-second clip tracking.
 ```powershell
 py -3.11 -m venv .venv
 .venv\Scripts\pip install -r app\requirements.txt
-copy .env.example .env        # optional: add GEMINI_API_KEY for LLM lines
+copy .env.example .env        # add FISH_API_KEY for Fish Audio
 ```
 
-Requires `ffmpeg`/`ffprobe` on PATH, and `yolov8n.pt` in `models\`
-(download once: https://github.com/ultralytics/assets/releases — or it is
-fetched automatically on first run).
+Requires `ffmpeg`/`ffprobe` on PATH. YOLO26n weights are expected at
+`weights/yolo26n.pt` for training and at
+`models/yolo26/yolo26n_v1_640/weights/best.pt` for inference.
 
-## Train the detector (one-time, ~2.5 h on RTX 3050)
+## Train the detector
 
 Dataset: football-players detection set (Roboflow CC-BY mirror), 8,677 train /
 2,996 test images with Player / Ball / Referee boxes. The zip is expected at
-`data/V1.zip` (download link in `download_dataset.py`) and extracts to `data/V1/`.
+`data/V1.zip` and extracts to `data/V1/`.
 
 ```powershell
-.venv\Scripts\python -m app.train_yolo data\V1 models\yolov8_football 50
+.venv\Scripts\python scripts\train_yolo26.py --epochs 50 --imgsz 640 --batch 16 --clearml
 ```
 
-Weights land at `models\yolov8_football\run1\weights\best.pt`; the pipeline
-picks them up automatically (falls back to COCO `yolov8n.pt` with
-person→player, sports-ball→ball mapping if absent).
+Weights land at `models/yolo26/yolo26n_v1_640/weights/best.pt`; point
+`FC_DETECTOR_WEIGHTS` at that file for the live pipeline.
 
 ## Commentary writers
 
-`app/commentary.py` auto-selects, in order (each falls back to the next per line):
+`app/commentary.py` uses the fine-tuned GPT-2 LoRA adapters and a deterministic
+validator:
 
-1. **Gemini 1.5 Flash** — if `GEMINI_API_KEY` is set.
-2. **Fine-tuned GPT-2 (LoRA)** — `models/gpt2_lora/`: gpt2 + r=16 LoRA on `c_attn`,
-   trained on markup-formatted match data
-   (`[HISTORY] … [EVENT] … [INTENSITY] … [COMMENTARY] …`). Prompted in its native
-   format it writes Opta-style lines (*"Header from the centre of the box to the
-   top right corner. Assisted by…"*) and predicts its own intensity, which drives
-   the excitement level. See `app/commentary_gpt2.py`.
-3. **Energetic templates** — always available; also writes all filler lines.
+1. **GPT-2 v4** — LoRA r=32, completion-only loss, trained on team-grounded
+   SoccerReplay commentary.
+2. **GPT-2 v5** — API-slot adapter (`<HOME>`, `<AWAY>`, `<TEAM>`, `<PLAYER>`,
+   `<SCORE>`, `<MINUTE>`) for API-Football and upload facts.
+3. **Grounded template** — the last-resort safety net when every candidate
+   fails validation.
 
-The adapter was saved with PEFT ≥0.19 but this repo pins 0.13.2; the config's
-newer keys were stripped from `models/gpt2_lora/adapter_config.json` so it loads.
+The validator checks team names, blocked names, digits/scores, event words and
+goal contradictions. It is a guard against invented facts, not a measure of
+fluency. See `app/commentary_gpt2.py`.
 
 ## Web UI
 
 ```powershell
-.venv\Scripts\python -m uvicorn app.webapp:app --port 8000
-# open http://127.0.0.1:8000 — drag & drop, live progress bar, streaming
-# transcript, inline player; jobs run in a background worker (POST /api/upload,
-# GET /api/job/{id}, POST /api/job/{id}/cancel)
+.venv\Scripts\python -m uvicorn app.webapp:app --host 127.0.0.1 --port 8100
+# open http://127.0.0.1:8100 — pipeline, ARG–FRA board, API feed, upload, training
 ```
+
+Jobs run in a single background worker (`POST /api/upload`,
+`GET /api/job/{id}`, `POST /api/job/{id}/cancel`). The upload accepts a video
+and a match-plan document; JSON plans are parsed in the browser for teams,
+venue, score, minute, players and positions.
 
 ## Run
 
@@ -202,14 +222,14 @@ runs ~0.6× realtime.
   faster than realtime.
 - **Weak supervision** (`app/vision/auto_label.py`): windows are auto-labeled
   by documented heuristics (ball in goalmouth + sustained presence → goal,
-  speed spike → shot, motion spike + speed dip + crowd → tackle). ResNet18 is
-  trained on those labels, then *refines* them: windows where the net is
-  confident (≥0.55) override the heuristic.
+  speed spike → shot, motion spike + speed dip + crowd → tackle). ResNet-18 is
+  trained on those weak labels and is **advisory**: it can promote a quiet pass
+  to shot/goal only with converging evidence; it never overrides the score-bug
+  anchor.
 - **No dead air** (`app/filler.py`): a filler engine inserts rotating ambient
   lines whenever narration gaps would exceed ~20s, so the commentary track is
   continuous.
 - **Audio bed**: original broadcast audio is kept at low volume (0.12) under
   the commentator for atmosphere — disable with `--no-orig-audio`.
-- **Three-tier writers**: Gemini → fine-tuned GPT-2 → templates. Every event
-  falls back per line if a writer errors, so a dead API key or missing adapter
-  degrades quality, never the run.
+- **Language + voice**: GPT-2 v4/v5 → validator → Fish Audio; a grounded
+  template is the safety net, and edge-tts is the TTS fallback if Fish fails.
