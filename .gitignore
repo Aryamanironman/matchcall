@@ -22,6 +22,7 @@ work/
 docs/~$*
 docs/report_pages/
 docs/capstone_logs/
+docs/capstone_logs_final/
 
 # gated SoccerReplay-1988 source and derived corpora (CC-BY-NC-SA)
 data/soccerreplay/
