@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;700;900&family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=20261030e">
+<link rel="stylesheet" href="/app.css?v=20261030f">
 </head>
 <body>
 
@@ -31,6 +31,7 @@
     <nav class="nav" aria-label="Sections">
       <a href="#pipeline">Pipeline</a>
       <a href="#reel">ARG–FRA demo</a>
+      <a href="#api">API feed</a>
       <a href="#call">Upload</a>
       <a href="#training">Training</a>
     </nav>
@@ -227,12 +228,84 @@
     </div>
   </section>
 
-  <!-- 03 · UPLOAD -->
+  <!-- 03 · API -->
+  <section class="section api-section" id="api">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <div class="section-tag">03 / The API</div>
+          <h2 class="led-title">API-FOOTBALL</h2>
+        </div>
+        <p>The API supplies event truth. The language and voice stack is exactly the same; only the input changes.</p>
+      </div>
+
+      <div class="api-board">
+        <div class="api-left">
+          <div class="api-fixture">
+            <div class="api-fixture-label">Fixture 1551707 · 26 October 2026 · 85:00–90:00</div>
+            <div class="api-fixture-score">LD Alajuelense <b>1–0</b> Perez Zeledon</div>
+          </div>
+          <div class="api-events">
+            <div class="api-event card">
+              <span class="min">89′</span>
+              <span class="api-event-main"><b>Yellow card</b><span>Perez Zeledon · W. Fernandez</span></span>
+              <span class="kind">Card</span>
+            </div>
+            <div class="api-event card">
+              <span class="min">90′</span>
+              <span class="api-event-main"><b>Yellow card</b><span>LD Alajuelense · E. Barley</span></span>
+              <span class="kind">Card</span>
+            </div>
+            <div class="api-event goal">
+              <span class="min">90′</span>
+              <span class="api-event-main"><b>Goal</b><span>LD Alajuelense · A. Hernandez</span></span>
+              <span class="kind">Goal</span>
+            </div>
+          </div>
+          <p class="api-note">The two cards are skipped because the current commentary label set has no card class. The API gives major events only: goals, cards, substitutions and VAR — not shots or corners.</p>
+        </div>
+
+        <div class="api-right">
+          <div class="api-label">Grounded line / GPT-2</div>
+          <blockquote class="api-line">“Goal! A. Hernandez (LD Alajuelense) latches on to a precise pass inside the box and unleashes a shot into the left side of the goal. The score is 1:0.”</blockquote>
+          <div class="api-meta">
+            <span>TEAM <b>✓</b></span><span>PLAYER <b>✓</b></span><span>SCORE <b>✓</b></span><span>TTS <b>2.1 S</b></span>
+          </div>
+          <div class="api-flow" aria-label="API to commentary flow">
+            <div><span>01</span>API event</div>
+            <div><span>02</span>Fact sheet</div>
+            <div><span>03</span>GPT-2</div>
+            <div><span>04</span>Validator</div>
+            <div><span>05</span>Fish voice</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="api-under">
+        <div class="api-code">
+          <div class="api-label">The call we made</div>
+          <pre>GET https://v3.football.api-sports.io/fixtures/events
+    ?fixture=1551707
+x-apisports-key: ••••••••
+
+→ minute, team, player, type, detail
+→ score and minute are frozen into facts
+→ the key stays server-side</pre>
+        </div>
+        <div class="api-compare">
+          <div class="api-label">Why both feeds</div>
+          <p><b>API-Football</b> is the clean event truth: who scored, when, and for which team. <b>Video</b> is the richer but noisier feed: shots, corners, possession and positions. Use the API to anchor the event and the video to enrich it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 · UPLOAD -->
   <section class="section upload" id="call">
     <div class="wrap">
       <div class="section-head">
         <div>
-          <div class="section-tag">03 / Your match</div>
+          <div class="section-tag">04 / Your match</div>
           <h2 class="led-title">UPLOAD A MATCH</h2>
         </div>
         <p>Upload the match video and the match plan. The plan supplies the teams, players, venue and positions used by the grounded description layer.</p>
@@ -305,12 +378,12 @@
     </div>
   </section>
 
-  <!-- 04 · TRAINING -->
+  <!-- 05 · TRAINING -->
   <section class="section training" id="training">
     <div class="wrap">
       <div class="section-head">
         <div>
-          <div class="section-tag">04 / The evidence</div>
+          <div class="section-tag">05 / The evidence</div>
           <h2 class="led-title">TRAINING / CLEARML</h2>
         </div>
         <p>Every run is a ClearML task: parameters, dataset, metrics, plots and the registered model.</p>
@@ -373,6 +446,6 @@
   </div>
 </footer>
 
-<script src="/app.js?v=20261030e" defer></script>
+<script src="/app.js?v=20261030f" defer></script>
 </body>
 </html>
