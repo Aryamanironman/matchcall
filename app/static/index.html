@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;700;900&family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/app.css?v=20261030b">
+<link rel="stylesheet" href="/app.css?v=20261030e">
 </head>
 <body>
 
@@ -34,10 +34,6 @@
       <a href="#call">Upload</a>
       <a href="#training">Training</a>
     </nav>
-    <span class="status-pill">
-      <span class="dot live" id="statusDot"></span>
-      <span id="statusText">Fish s2.1-pro-free</span>
-    </span>
   </div>
 </header>
 
@@ -46,12 +42,67 @@
   <!-- 01 · PIPELINE -->
   <section class="section pipeline" id="pipeline">
     <div class="wrap">
-      <div class="section-head">
-        <div>
+      <div class="pipeline-hero">
+        <div class="pipeline-copy">
           <div class="section-tag">01 / The system</div>
           <h1 class="led-title">THE PIPELINE</h1>
+          <p class="pipeline-lede">Video in at the back, commentary out up front. Five stages, one pass; every stage hands the next a real output.</p>
+          <div class="pipeline-key"><span>video in</span><i></i><span>facts</span><i></i><span>voice out</span></div>
         </div>
-        <p>Video in at the back, commentary out up front. Five stages, one pass; every stage hands the next a real output.</p>
+        <div class="pitch-wrap">
+          <svg class="pitch" viewBox="0 0 560 540" role="img" aria-labelledby="pitchTitle">
+            <title id="pitchTitle">The five-stage pipeline drawn as a football formation: action spotting, tracking, description, commentary and voice.</title>
+            <rect class="pitch-bg" x="1.5" y="1.5" width="557" height="537" rx="20"/>
+            <g class="pitch-line" aria-hidden="true">
+              <line x1="30" y1="270" x2="530" y2="270"/>
+              <circle cx="280" cy="270" r="56"/>
+              <rect x="176" y="1" width="208" height="58"/>
+              <rect x="222" y="1" width="116" height="24"/>
+              <rect x="176" y="481" width="208" height="58"/>
+              <rect x="222" y="515" width="116" height="24"/>
+            </g>
+            <circle class="pitch-dot" cx="280" cy="270" r="2.5" aria-hidden="true"/>
+            <path id="passPath" class="pass-line" d="M280 452 L182 368 L280 276 L390 188 L280 92" aria-hidden="true"/>
+
+            <g class="node">
+              <circle class="node-badge" cx="280" cy="452" r="21" stroke="var(--sky)"/>
+              <text class="node-num" x="280" y="452" fill="var(--sky)">01</text>
+              <text class="node-name start" x="310" y="446">Action spotting</text>
+              <text class="node-model start" x="310" y="460">score-bug + window scan</text>
+            </g>
+            <g class="node">
+              <circle class="node-badge" cx="182" cy="368" r="21" stroke="var(--sky)"/>
+              <text class="node-num" x="182" y="368" fill="var(--sky)">02</text>
+              <text class="node-name" x="182" y="405">Tracking</text>
+              <text class="node-model" x="182" y="418">YOLO + ByteTrack</text>
+            </g>
+            <g class="node">
+              <circle class="node-badge" cx="280" cy="276" r="21" stroke="var(--lime)"/>
+              <text class="node-num" x="280" y="276" fill="var(--lime)">03</text>
+              <text class="node-name" x="280" y="313">Description</text>
+              <text class="node-model" x="280" y="326">grounded facts</text>
+            </g>
+            <g class="node">
+              <circle class="node-badge" cx="390" cy="188" r="21" stroke="var(--lime)"/>
+              <text class="node-num" x="390" y="188" fill="var(--lime)">04</text>
+              <text class="node-name" x="390" y="225">Commentary</text>
+              <text class="node-model" x="390" y="238">GPT-2 LoRA</text>
+            </g>
+            <g class="node">
+              <circle class="node-badge" cx="280" cy="92" r="21" stroke="var(--coral)"/>
+              <text class="node-num" x="280" y="92" fill="var(--coral)">05</text>
+              <text class="node-name" x="280" y="129">Voice</text>
+              <text class="node-model" x="280" y="142">Fish s2.1</text>
+            </g>
+
+            <circle class="ball" r="5.5" cx="280" cy="452">
+              <animateMotion dur="3.4s" begin="0.8s" fill="freeze" calcMode="linear">
+                <mpath href="#passPath"/>
+              </animateMotion>
+            </circle>
+          </svg>
+          <p class="pitch-caption">Video in at the back, commentary out up front.</p>
+        </div>
       </div>
 
       <div class="pipeline-board">
@@ -104,14 +155,6 @@
   <!-- 02 · DEMO -->
   <section class="section demo" id="reel">
     <div class="wrap">
-      <div class="section-head">
-        <div>
-          <div class="section-tag">02 / The demo</div>
-          <h2 class="led-title">ARG–FRA</h2>
-        </div>
-        <p id="reelSub">Argentina 2–2 France, second half. Ten moments, ten seconds each, voiced by Fish Audio.</p>
-      </div>
-
       <div class="scoreboard" aria-label="Argentina 2, France 2">
         <div class="score-grid">
           <div class="team-name">ARG<small>ARGENTINA / HOME</small></div>
@@ -119,19 +162,20 @@
           <div class="team-name">FRA<small>FRANCE / AWAY</small></div>
         </div>
         <div class="board-row">
-          <span>SECOND HALF</span><b>81:14</b><span>10 MOMENTS · 100 S</span>
+          <span>SECOND HALF</span><b>81:14</b><span>POSSESSION 48 / 52</span>
           <span class="goal"><i></i>GOAL · FRANCE</span>
         </div>
       </div>
 
       <div class="call-strip">
         <div class="call-main">
-          <div class="call-tag" id="nowKind">Now calling / 81′ / goal</div>
-          <blockquote id="nowCall">“France make it <em>2–2</em>. The ground is up.”</blockquote>
+          <div class="call-tag">Now calling / 81′ / goal</div>
+          <blockquote>“France make it <em>2–2</em>. The ground is up.”</blockquote>
           <div class="call-meta">
-            <span>MINUTE <b id="nowMinute">81′</b></span>
-            <span>SCORE <b>ARG 2–2 FRA</b></span>
+            <span>MINUTE <b>81′</b></span>
+            <span>SCORE <b>2–2</b></span>
             <span>VOICE <b>FISH S2.1</b></span>
+            <span>MODE <b>GROUNDED</b></span>
           </div>
         </div>
         <div class="meter">
@@ -139,6 +183,14 @@
           <div class="waveform" id="waveform" aria-hidden="true"></div>
           <div class="meter-stamp">ON AIR · 81′ · GOAL</div>
         </div>
+      </div>
+
+      <div class="section-head demo-head">
+        <div>
+          <div class="section-tag">02 / The demo</div>
+          <h2 class="led-title">THE REEL</h2>
+        </div>
+        <p id="reelSub">Argentina 2–2 France, second half. Ten moments, ten seconds each, voiced by Fish Audio.</p>
       </div>
 
       <div class="demo-grid">
@@ -183,7 +235,7 @@
           <div class="section-tag">03 / Your match</div>
           <h2 class="led-title">UPLOAD A MATCH</h2>
         </div>
-        <p>Any football video. Set the score and clock at the start; the pipeline runs locally on your GPU.</p>
+        <p>Upload the match video and the match plan. The plan supplies the teams, players, venue and positions used by the grounded description layer.</p>
       </div>
 
       <div class="call-grid">
@@ -195,15 +247,36 @@
             <span>or click to choose · mp4 / mov / mkv</span>
           </div>
           <input type="file" id="file" accept="video/*" hidden>
-          <div class="field-grid">
-            <div class="field"><label for="home">Home team</label><input id="home" placeholder="Argentina"></div>
-            <div class="field"><label for="away">Away team</label><input id="away" placeholder="France"></div>
-            <div class="field"><label for="scoreHome">Home score at start</label><input id="scoreHome" type="number" min="0" step="1" value="0"></div>
-            <div class="field"><label for="scoreAway">Away score at start</label><input id="scoreAway" type="number" min="0" step="1" value="0"></div>
-            <div class="field"><label for="minuteOffset">Broadcast minute at start</label><input id="minuteOffset" type="number" min="0" step="0.01" value="0"></div>
-            <div class="field"><label for="t0">Start (s)</label><input id="t0" type="number" min="0" step="1" value="0"></div>
-            <div class="field"><label for="dur">Length (s, blank = full)</label><input id="dur" type="number" min="0" step="1" value="90"></div>
+
+          <div class="plan-drop" id="planDrop" role="button" tabindex="0" aria-label="Choose a match plan document">
+            <b>Drop the match plan</b>
+            <span>JSON / CSV / TXT · teams, players, venue, positions</span>
           </div>
+          <input type="file" id="plan" accept=".json,.csv,.txt,.md,.pdf,.docx" hidden>
+          <div class="plan-preview" id="planPreview" hidden></div>
+          <details class="plan-help">
+            <summary>What goes in the match plan?</summary>
+            <pre>{
+  "home": "Argentina",
+  "away": "France",
+  "venue": "Lusail Stadium",
+  "score_home": 2,
+  "score_away": 2,
+  "minute": 81,
+  "players": [
+    {"name": "player name", "team": "ARG", "position": "GK"}
+  ],
+  "positions": {"ARG": [], "FRA": []}
+}</pre>
+          </details>
+
+          <input type="hidden" id="home" value="Home">
+          <input type="hidden" id="away" value="Away">
+          <input type="hidden" id="scoreHome" value="0">
+          <input type="hidden" id="scoreAway" value="0">
+          <input type="hidden" id="minuteOffset" value="0">
+          <input type="hidden" id="t0" value="0">
+          <input type="hidden" id="dur" value="">
           <label class="check"><input type="checkbox" id="orig" checked> Keep the broadcast crowd under the commentary</label>
           <button class="btn btn-primary" id="go" type="submit">Call it</button>
         </form>
@@ -300,6 +373,6 @@
   </div>
 </footer>
 
-<script src="/app.js?v=20261030b" defer></script>
+<script src="/app.js?v=20261030e" defer></script>
 </body>
 </html>

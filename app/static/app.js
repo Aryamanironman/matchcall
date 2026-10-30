@@ -326,8 +326,10 @@ function renderTraining(d) {
     : state === 'paused' ? `paused at epoch ${epoch}/${total}`
     : state === 'running' ? `epoch ${epoch}/${total}`
     : 'starting';
-  $('#statusText').textContent = `Fish s2.1-pro-free · YOLOv5lu ${label}`;
-  $('#statusDot').className = 'dot ' + (state === 'done' ? '' : running ? 'live' : 'warn');
+  const statusText = $('#statusText');
+  if (statusText) statusText.textContent = `Fish s2.1-pro-free · YOLOv5lu ${label}`;
+  const statusDot = $('#statusDot');
+  if (statusDot) statusDot.className = 'dot ' + (state === 'done' ? '' : running ? 'live' : 'warn');
   $('#trainStatus').textContent = `YOLOv5lu ${label} · GPT-2 LoRA v4 done${l.final_loss != null ? ' · loss ' + l.final_loss : ''}`;
 
   const badge = $('#yoloBadge');
@@ -481,8 +483,50 @@ function showFile(file) {
   drop.innerHTML = `<b>${esc(file.name)}</b><span class="file">${(file.size / 1e6).toFixed(1)} MB</span><span>click to change</span>`;
 }
 
+function showPlan(file) {
+  const box = $('#planPreview');
+  if (!file) { if (box) box.hidden = true; return; }
+  if (!box) return;
+  box.hidden = false;
+  const base = `<div class="plan-file">${esc(file.name)} · ${(file.size / 1e6).toFixed(1)} MB</div>`;
+  if (!/\.json$/i.test(file.name)) {
+    box.innerHTML = base + '<div>Plan attached. JSON is parsed automatically; other formats stay attached for the run.</div>';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const p = JSON.parse(reader.result);
+      const home = p.home || (p.teams && p.teams.home) || 'Home';
+      const away = p.away || (p.teams && p.teams.away) || 'Away';
+      const venue = p.venue || p.location || 'venue not set';
+      const players = Array.isArray(p.players) ? p.players : [];
+      const positions = p.positions && typeof p.positions === 'object'
+        ? Object.keys(p.positions).length : 0;
+      const set = (id, value) => {
+        const el = $('#' + id);
+        if (el && value != null) el.value = value;
+      };
+      set('home', home);
+      set('away', away);
+      set('scoreHome', p.score_home ?? (p.score && p.score.home));
+      set('scoreAway', p.score_away ?? (p.score && p.score.away));
+      set('minuteOffset', p.minute ?? p.minute_offset);
+      set('t0', p.start ?? p.t0);
+      set('dur', p.length ?? p.dur);
+      box.innerHTML = base +
+        `<div><b>${esc(home)} vs ${esc(away)}</b> · ${esc(venue)}</div>` +
+        `<div>${players.length} player${players.length === 1 ? '' : 's'} · ${positions} position group${positions === 1 ? '' : 's'}</div>`;
+    } catch {
+      box.innerHTML = base + '<div>JSON could not be parsed; the plan is still attached.</div>';
+    }
+  };
+  reader.readAsText(file);
+}
+
 function setupUpload() {
   const drop = $('#drop'), fileIn = $('#file'), form = $('#callForm');
+  const planDrop = $('#planDrop'), planIn = $('#plan');
   const open = () => fileIn.click();
   drop.addEventListener('click', open);
   drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
@@ -493,6 +537,19 @@ function setupUpload() {
     if (e.dataTransfer.files.length) { fileIn.files = e.dataTransfer.files; showFile(fileIn.files[0]); }
   });
   fileIn.addEventListener('change', () => showFile(fileIn.files[0]));
+
+  if (planDrop && planIn) {
+    const openPlan = () => planIn.click();
+    planDrop.addEventListener('click', openPlan);
+    planDrop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPlan(); } });
+    planDrop.addEventListener('dragover', e => { e.preventDefault(); planDrop.classList.add('over'); });
+    planDrop.addEventListener('dragleave', () => planDrop.classList.remove('over'));
+    planDrop.addEventListener('drop', e => {
+      e.preventDefault(); planDrop.classList.remove('over');
+      if (e.dataTransfer.files.length) { planIn.files = e.dataTransfer.files; showPlan(planIn.files[0]); }
+    });
+    planIn.addEventListener('change', () => showPlan(planIn.files[0]));
+  }
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
@@ -508,6 +565,7 @@ function setupUpload() {
     fd.append('score_home', $('#scoreHome').value || '0');
     fd.append('score_away', $('#scoreAway').value || '0');
     fd.append('minute_offset', $('#minuteOffset').value || '0');
+    if (planIn && planIn.files.length) fd.append('plan', planIn.files[0]);
 
     stopLive();
     if (localUrl) URL.revokeObjectURL(localUrl);
