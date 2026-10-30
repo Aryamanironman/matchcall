@@ -11,7 +11,7 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "capstone_logs"
+OUT = ROOT / "docs" / "capstone_logs_final"
 OUT.mkdir(parents=True, exist_ok=True)
 
 STUDENT = "Aryaman Sharma"
@@ -257,6 +257,35 @@ LOGS = [
         ],
         "hours": 12,
     },
+    {
+        "week": 10,
+        "dates": "2 – 6 November 2026",
+        "summary": ("Final submission and verification week. Completed the consistency pass, "
+                    "checked the public repository and prepared the final presentation package."),
+        "activities": [
+            "Proofread the final report: title page, references, figure/table numbering and appendices.",
+            "Verified the ten weekly logs and the public repository links.",
+            "Ran a final smoke test of the Stadium Board demo: pipeline, match board, API, upload and training.",
+            "Finalised the presentation runbook and code walkthrough.",
+            "Archived the report, logs, screenshots and submission links.",
+        ],
+        "progress": [
+            ("Final report", "Complete"),
+            ("Ten weekly logs", "Complete"),
+            ("Public repository", "Complete"),
+            ("Presentation package", "Complete"),
+            ("Human evaluation / independent annotation", "Pending — external work"),
+        ],
+        "issues": [
+            "The research checklist still needs human raters, independent event labels, tracking ground truth and an equal-budget YOLO run.",
+            "The public repository contains broadcast screenshots; confirm copyright clearance for the submission context.",
+        ],
+        "next": [
+            "Submit the report, logs and repository link.",
+            "If the project continues, run the human evaluation and independent annotation.",
+        ],
+        "hours": 10,
+    },
 ]
 
 
@@ -390,10 +419,11 @@ def build(log):
     r.bold = True
     p.add_run(f"{log['hours']} hours")
 
-    doc.add_heading("Supervisor comments", level=2)
-    p = doc.add_paragraph("Comments:")
-    p.paragraph_format.space_after = Pt(22)
-    doc.add_paragraph("Signature: ______________________________     Date: __________________")
+    p = doc.add_paragraph()
+    r = p.add_run("Project links: ")
+    r.bold = True
+    p.add_run("ClearML — https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8  ·  "
+              "GitHub — https://github.com/Aryamanironman/matchcall")
 
     page_number(section.footer.paragraphs[0])
 

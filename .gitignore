@@ -21,6 +21,7 @@ work/
 *.ytdl
 docs/~$*
 docs/report_pages/
+docs/capstone_logs/
 
 # gated SoccerReplay-1988 source and derived corpora (CC-BY-NC-SA)
 data/soccerreplay/
