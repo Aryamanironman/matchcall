@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 from pathlib import Path
 
@@ -23,7 +24,8 @@ REPO = ROOT.parents[2]
 DOCS = ROOT / "docs"
 FIG = DOCS / "paper_figures"
 TEMPLATE = Path(r"C:\Users\asus\Downloads\project report template.docx")
-OUT = DOCS / "Matchcall_Project_Report.docx"
+OUT = Path(os.getenv("REPORT_OUT",
+                     str(DOCS / "Matchcall_Project_Report.docx")))
 
 AI = json.loads((REPO / "output" / "comparison" / "commentary_comparison.json")
                 .read_text(encoding="utf-8"))
@@ -705,7 +707,7 @@ H2("Appendix A — Reproducibility")
 P("The commands below assume the project virtual environment and the ARG–FRA video. The full-match "
   "job is 7c23a8a91829 and the corrected goal clip is 8cdba651f954. The API example is "
   "scripts/api_feed_current_example.py. ClearML project: Football Commentator "
-  "(ef18bd575abc408591532be2ac8f39b8).")
+  "(ef18bd575abc408591532be2ac8f39b8), https://app.clear.ml/projects/ef18bd575abc408591532be2ac8f39b8.")
 for line in (
     "python scripts/compare_commentary.py --n 40 --device cuda",
     "python scripts/bootstrap_commentary.py",
