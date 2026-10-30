@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 import shutil
 from pathlib import Path
@@ -18,7 +19,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[2]
-OUT = ROOT / "docs" / "Matchcall_Paper_v5.docx"
+OUT = Path(os.getenv("PAPER_OUT", str(ROOT / "docs" / "Matchcall_Paper_v5.docx")))
 FIG = ROOT / "docs" / "paper_figures"
 
 
@@ -783,6 +784,82 @@ add_figure(FIG / "fig8_cost.png", 9,
            "of magnitude below the human scenario; the barrier to deployment is quality and latency, "
            "not compute. The API-Football free tier used here is $0 and cannot be shown on a log "
            "axis.", width=6.0)
+
+doc.add_heading("5.6 Tracking, possession and ball path", level=2)
+P("Figure 10 shows the tracking overlay across six moments of the ARG–FRA clip. Boxes are tracked "
+  "players, the green dot and trail are the ball path, and the bar along the bottom is the live "
+  "possession split. Figure 11 isolates the same overlay around the 80′–81′ sequence, where the "
+  "possession bar and the ball trail are easiest to read.")
+add_figure(ROOT / "docs" / "tracking_contact.jpg", 10,
+           "Tracking overlay across six moments. Player boxes are ByteTrack identities; the green "
+           "dot/trail is the ball path; the bottom bar is the possession split (Argentina white, "
+           "France blue). The tracker, not the language model, supplies these facts.", width=6.2)
+add_figure(ROOT / "docs" / "possession_contact.jpg", 11,
+           "Possession and ball path around the 80′–81′ sequence. The bottom bar reports the "
+           "team possession split; the green trail shows the smoothed ball path. Both are aggregated "
+           "into the fact sheet used by the commentary stage.", width=6.2)
+P("The overlay is generated in three steps. YOLO26n detects players, the referee and the ball in "
+  "each scheduled frame; ByteTrack keeps identities across frames. Jersey colours are clustered into "
+  "two teams with KMeans, and possession is assigned to the team of the tracked player nearest the "
+  "smoothed ball. Short ball gaps are interpolated only across bounded gaps, and single-frame "
+  "teleports are rejected. The per-frame possession indicator is then averaged into the 2.5-second "
+  "window facts: possession_home, possession_away, ball visibility, ball zone and tracked-player "
+  "count.")
+BP("Why the overlay matters.", "The same numbers in the overlay become the fact sheet. When the "
+   "commentary says a side is in control, it is reading the possession feature, not inventing a "
+   "narrative. The goal-side anchor comes from the score bug; the tracker supplies the surrounding "
+   "play.")
+BP("What the overlay does not solve.", "Broadcast cuts, close-ups and crowd shots break the ball "
+   "path, and similar kits can confuse the jersey clusters. Possession is therefore an estimate, not "
+   "a tracking ground truth. The pipeline marks interpolated gaps and never treats a missing ball as "
+   "a fact.")
+
+doc.add_heading("5.7 Commercialisation and cost advantage", level=2)
+P("The measured cost is the commercial opening. A 64.5-minute match costs about $0.392 on a cloud "
+  "A10G, or about $0.010 of local electricity. Against an illustrative two-person human team at "
+  "$50/h, that is 765× cheaper than a $300 live team and 1,020× cheaper than a $400 pre-recorded "
+  "team on cloud compute. Local electricity is 30,000–40,000× cheaper, but that figure excludes the "
+  "GPU hardware, so the cloud comparison is the honest one. Across a $25–$100/h human range, the "
+  "cloud advantage is roughly 380–1,530×.")
+table_caption(8, "Cost advantage per 64.5-minute match. Human rates are illustrative; compute is "
+                 "measured. The local column is electricity only and excludes GPU hardware. Paid TTS, "
+                 "paid API plans, storage, rights and human review are excluded.")
+add_table(
+    ["Baseline", "Cost / match", "Matchcall cloud", "Matchcall local", "Advantage"],
+    [
+        ["Human live team (2 × $50/h × 3 h)", "$300", "$0.392", "$0.010",
+         "765× cloud; 30,000× local"],
+        ["Human pre-recorded team (2 × $50/h × 4 h)", "$400", "$0.392", "$0.010",
+         "1,020× cloud; 40,000× local"],
+        ["Human range, $25–$100/h", "$150–$600", "$0.392", "—",
+         "380–1,530× cloud"],
+        ["API-Football, free tier", "$0 requests", "—", "—",
+         "Paid plan excluded; not a compute comparison"],
+    ],
+    [2.4, 1.0, 1.0, 1.0, 1.55], font_size=8.0)
+P("These are compute-only comparisons. They exclude the costs that decide a real product: paid TTS "
+  "above the free tier, paid API-Football, storage and egress, rights clearance, human quality "
+  "review and support. They also exclude the cost of the GPU if the service is deployed on-premise. "
+  "At an illustrative $10–$50 per match, cloud compute is 0.8–3.9% of revenue before those costs; "
+  "that is the margin the product has to protect.")
+BP("Per-match SaaS for rights-holders.", "Sell processed commentary or highlight packages to "
+   "broadcasters, clubs and lower leagues that cannot justify a full commentary team. The customer "
+   "pays per match or per minute of output; the provider runs the GPU pipeline.")
+BP("On-premise or white-label.", "Rights-holders often cannot send video to a third party. A "
+   "containerised on-premise version keeps the video local and licenses the pipeline and models. "
+   "This is the natural route for federations and large clubs.")
+BP("Highlights and social clips.", "The same facts and voice can produce short vertical clips, "
+   "multilingual descriptions and automated match reports. The marginal cost is another generation "
+   "and TTS pass, not another camera crew.")
+BP("API-fed second screen.", "Where a live event feed exists, the API path can anchor goals, cards "
+   "and substitutions without reading the video. The video path then adds shots, corners, "
+   "possession and player context. The two feeds are complementary, not competing.")
+P("The commercial moat is not the language model. It is the auditable fact layer, the score-bug "
+  "anchor and the ability to run the whole chain on one consumer GPU. The risks are equally clear: "
+  "general event recall is still 0.40, the system is pre-recorded rather than live, the commentary "
+  "needs human review, and rights and league data licences are commercial prerequisites. A credible "
+  "first market is lower-league and highlights automation, where the alternative is no commentary at "
+  "all; live top-flight commentary is a later, harder market.")
 
 # ---------------------------------------------------------------- 6 discussion
 doc.add_heading("6. Discussion", level=1)
