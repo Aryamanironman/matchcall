@@ -22,7 +22,7 @@ COURSE = "31243 AI/Data Analytics Capstone Project"
 LOGS = [
     {
         "week": 1,
-        "dates": "31 August – 4 September 2026",
+        "dates": "7 – 13 August 2026",
         "summary": ("Project scoping and literature review. Defined the five-stage "
                     "video-to-voice pipeline and audited the available datasets and compute."),
         "activities": [
@@ -49,7 +49,7 @@ LOGS = [
     },
     {
         "week": 2,
-        "dates": "7 – 11 September 2026",
+        "dates": "14 – 20 August 2026",
         "summary": ("Built the action-spotting front end and the first reproducible video scan."),
         "activities": [
             "Implemented 4 fps proxy-frame extraction and frame-difference motion scoring.",
@@ -75,7 +75,7 @@ LOGS = [
     },
     {
         "week": 3,
-        "dates": "14 – 18 September 2026",
+        "dates": "21 – 27 August 2026",
         "summary": ("Added tracking, team assignment and possession, and produced the first annotated clip."),
         "activities": [
             "Fine-tuned the YOLOv5lu detector on the V1 dataset and logged the run in ClearML.",
@@ -101,7 +101,7 @@ LOGS = [
     },
     {
         "week": 4,
-        "dates": "21 – 25 September 2026",
+        "dates": "28 August – 3 September 2026",
         "summary": ("Built the first language and voice stages with a grounded validator."),
         "activities": [
             "Built the SoccerReplay commentary corpus and the completion-only LoRA training script.",
@@ -127,7 +127,7 @@ LOGS = [
     },
     {
         "week": 5,
-        "dates": "28 September – 2 October 2026",
+        "dates": "4 – 10 September 2026",
         "summary": ("Completed the first full-match run and measured the system honestly."),
         "activities": [
             "Ran the 64.5-minute ARG–FRA broadcast end to end.",
@@ -153,7 +153,7 @@ LOGS = [
     },
     {
         "week": 6,
-        "dates": "5 – 9 October 2026",
+        "dates": "11 – 17 September 2026",
         "summary": ("Trained YOLO26n, evaluated detection and drafted the paper structure."),
         "activities": [
             "Fine-tuned YOLO26n for 50 epochs at 640 px and logged the run in ClearML.",
@@ -179,7 +179,7 @@ LOGS = [
     },
     {
         "week": 7,
-        "dates": "12 – 16 October 2026",
+        "dates": "18 – 24 September 2026",
         "summary": ("Integrated API-Football and trained the v5 API-slot commentary adapter."),
         "activities": [
             "Connected the API-Football fixture 1551707 (LD Alajuelense 1–0 Perez Zeledon).",
@@ -205,7 +205,7 @@ LOGS = [
     },
     {
         "week": 8,
-        "dates": "19 – 23 October 2026",
+        "dates": "25 September – 1 October 2026",
         "summary": ("Redesigned the demo UI, added the match-plan upload and strengthened the report."),
         "activities": [
             "Designed and implemented the Stadium Board UI: pipeline, ARG–FRA board, API, upload, training.",
@@ -231,7 +231,7 @@ LOGS = [
     },
     {
         "week": 9,
-        "dates": "26 – 30 October 2026",
+        "dates": "2 – 8 October 2026",
         "summary": ("Final integration, report completion, demo checks and submission preparation."),
         "activities": [
             "Completed the UTS-template report: 22 pages, 15 figures, 13 tables and 21 references.",
@@ -259,7 +259,7 @@ LOGS = [
     },
     {
         "week": 10,
-        "dates": "2 – 6 November 2026",
+        "dates": "9 – 23 October 2026",
         "summary": ("Final submission and verification week. Completed the consistency pass, "
                     "checked the public repository and prepared the final presentation package."),
         "activities": [
