@@ -639,6 +639,20 @@ P("Automatic overlap metrics cannot establish whether commentary is accurate, na
   "raters and five-point scales for factual correctness, naturalness and broadcast suitability, "
   "with Krippendorff's alpha. That study was not run for this report; the protocol is stated so the "
   "absence of a human result is visible rather than hidden behind BLEU/ROUGE/METEOR.")
+H2("8.10 Demo Interface")
+P("The browser demo exposes the pipeline in the order the project runs: the five-stage pipeline, the "
+  "ARG–FRA match board and reel, the API-Football example, the upload/match-plan form, and the "
+  "training/ClearML evidence. Figures 11–13 show the live Stadium Board build. The screenshots are "
+  "from the running application, not mock-ups.")
+figure(DOCS / "demo_pipeline.png", 11,
+       "Live pipeline screen. The formation map and five stage cards expose action spotting, tracking, "
+       "the fact sheet, commentary and voice.", width=6.2)
+figure(DOCS / "demo_match.png", 12,
+       "Live ARG–FRA board and reel. The scoreboard, commentary bus, possession bar, player tracking "
+       "and rundown are all driven by the same event/fact artifacts.", width=6.2)
+figure(DOCS / "demo_api.png", 13,
+       "Live API-Football section. The real fixture, returned events, grounded GPT-2 line and "
+       "API-to-voice flow are shown next to the video path.", width=6.2)
 
 # ---------------------------------------------------------------- 9 conclusion
 H1("9. Conclusion")
@@ -688,24 +702,40 @@ for i, ref in enumerate(refs, 1):
 # ---------------------------------------------------------------- appendices
 H1("12. Appendices")
 H2("Appendix A — Reproducibility")
-P("The main artifacts are produced by the following commands. The full-match job is 7c23a8a91829; "
-  "the corrected goal clip is 8cdba651f954. The API example is scripts/api_feed_current_example.py.")
+P("The commands below assume the project virtual environment and the ARG–FRA video. The full-match "
+  "job is 7c23a8a91829 and the corrected goal clip is 8cdba651f954. The API example is "
+  "scripts/api_feed_current_example.py. ClearML project: Football Commentator "
+  "(ef18bd575abc408591532be2ac8f39b8).")
 for line in (
     "python scripts/compare_commentary.py --n 40 --device cuda",
     "python scripts/bootstrap_commentary.py",
     "python scripts/evaluate_event_spotting.py",
     "python scripts/compile_experiments.py",
     "python scripts/api_feed_current_example.py",
+    "python scripts/train_yolo26.py --epochs 50 --imgsz 640 --batch 16 --clearml",
+    "python -m uvicorn app.webapp:app --host 127.0.0.1 --port 8100",
 ):
     p = doc.add_paragraph(line)
     p.paragraph_format.left_indent = Inches(0.2)
     for r in p.runs:
         r.font.name = "Consolas"
         r.font.size = Pt(9)
+caption("Table 9. Reproducibility artifacts and where they live.")
+add_table(["Artifact", "Where", "Purpose"], [
+    ["Commentary comparison", "output/comparison/commentary_comparison.json", "40-prompt metrics and lines"],
+    ["Bootstrap statistics", "output/comparison/commentary_bootstrap.json", "95% CIs and p-values"],
+    ["Event spotting", "output/experiments/event_spotting.json", "Ten-moment recall and goal precision"],
+    ["Full-match job", "7c23a8a91829", "43-line ARG–FRA run"],
+    ["Corrected goal clip", "8cdba651f954", "Goal-anchor verification"],
+    ["YOLO26n run", "models/yolo26/yolo26n_v1_640", "Weights, results.csv, curves"],
+    ["GPT-2 v4 / v5", "models/gpt2_lora_v4, models/gpt2_lora_v5", "LoRA adapters"],
+    ["ClearML tasks", "Football Commentator project", "Scalars, plots, models"],
+], [1.6, 3.0, 2.0], font_size=8.4)
+
 H2("Appendix B — Match-Plan Schema")
-P("The upload accepts a JSON match plan with home, away, venue, score, minute, players and positions. "
-  "The browser parses the JSON and fills the match facts; the backend parser for players and "
-  "positions is the next implementation step. A minimal schema is shown below.")
+P("The upload accepts a JSON match plan. The browser parses the file and fills the match facts; the "
+  "backend parser for players and positions is the next implementation step. The schema is deliberately "
+  "small so a club analyst can produce it from a team sheet.")
 for line in (
     '{ "home": "Argentina", "away": "France", "venue": "Lusail Stadium",',
     '  "score_home": 2, "score_away": 2, "minute": 81,',
@@ -717,11 +747,68 @@ for line in (
     for r in p.runs:
         r.font.name = "Consolas"
         r.font.size = Pt(9)
+caption("Table 10. Match-plan fields.")
+add_table(["Field", "Type", "Use"], [
+    ["home / away", "string", "Team names and commentary attribution"],
+    ["venue", "string", "Grounded venue fact"],
+    ["score_home / score_away", "integer", "Starting score for the fact sheet"],
+    ["minute", "integer", "Broadcast minute at the start"],
+    ["players", "array", "Name, team, shirt number, role"],
+    ["positions", "object", "Formation/role or pitch coordinates"],
+], [1.8, 0.9, 3.8], font_size=8.6)
+
 H2("Appendix C — Cost Assumptions")
-P("Cloud: $1.21/h for an ml.g5.2xlarge. Local electricity: $0.30/kWh. Human team: two people at "
-  "$50/h for three live hours or four pre-recorded hours, illustrative rather than a quote. "
+P("Cloud: $1.21/h for an ml.g5.2xlarge. Local electricity: $0.30/kWh at 100 W. Human team: two people "
+  "at $50/h for three live hours or four pre-recorded hours; this is illustrative, not a quote. "
   "API-Football: free tier for the requests made; paid plans excluded. Fish Audio: free tier; paid "
   "TTS, storage and egress excluded. The local electricity figure excludes GPU hardware.")
+caption("Table 11. Cost calculations used in Section 8.7.")
+add_table(["Item", "Calculation", "Result"], [
+    ["Cloud inference", "$1.21/h × 19.4/60 h", "$0.392"],
+    ["Local electricity", "0.1 kW × 19.4/60 h × $0.30/kWh", "$0.010"],
+    ["Cloud training", "$1.21/h × 3.64 h", "$4.40"],
+    ["Local training", "0.1 kW × 3.64 h × $0.30/kWh", "$0.109"],
+    ["Human live team", "2 people × $50/h × 3 h", "$300"],
+    ["Human pre-recorded", "2 people × $50/h × 4 h", "$400"],
+], [1.6, 3.4, 1.1], font_size=8.6)
+
+H2("Appendix D — Demo Screenshots")
+P("The upload and training screens complete the demo walkthrough. The upload accepts a video and a "
+  "match plan; the training screen reads the YOLO26n run and the GPT-2 adapters from ClearML-backed "
+  "artifacts. These are live application screenshots, not mock-ups.")
+figure(DOCS / "demo_upload.png", 14,
+       "Live upload screen. The video drop and match-plan drop are separate; JSON plans are parsed for "
+       "teams, venue, score, minute and player/position counts.", width=6.2)
+figure(DOCS / "demo_training.png", 15,
+       "Live training screen. YOLO26n metrics and curves, GPT-2 v4/v5 loss, ClearML links and the "
+       "model artifacts are shown in the same board.", width=6.2)
+
+H2("Appendix E — Repository Map")
+caption("Table 12. Main repository areas.")
+add_table(["Path", "Contents"], [
+    ["app/pipeline.py", "End-to-end orchestration"],
+    ["app/vision/", "Score bug, sampling, labels, detector, tracking"],
+    ["app/commentary_gpt2.py", "GPT-2 prompt, generation, validator"],
+    ["app/tts.py", "Fish Audio primary, edge-tts fallback"],
+    ["app/webapp.py", "Upload job queue and web API"],
+    ["scripts/", "Training, evaluation, report builders"],
+    ["docs/", "Report, figures, runbook, walkthrough"],
+    ["output/", "Generated clips, transcripts, metrics (gitignored)"],
+    ["models/", "Checkpoints and adapters (gitignored)"],
+], [2.2, 4.3], font_size=8.6)
+
+H2("Appendix F — Evaluation Checklist")
+caption("Table 13. What is complete and what still needs external data or people.")
+add_table(["Item", "Status", "Note"], [
+    ["Commentary metrics, 40 prompts", "Complete", "BLEU/ROUGE/METEOR + bootstrap CIs"],
+    ["Event spotting, 10 moments", "Complete", "Recall 0.40; goals 2/2"],
+    ["Reproducibility / ClearML", "Complete", "Scripts, artifacts, task IDs"],
+    ["Independent event annotation", "Pending", "Needs human labels on 2–3 matches"],
+    ["Human commentary evaluation", "Pending", "Protocol in Section 8.9"],
+    ["Tracking MOTA/IDF1", "Pending", "Needs frame-level ground truth"],
+    ["Equal-budget YOLO comparison", "Pending", "Needs matched epochs/GPU time"],
+    ["Same-match API vs video", "Pending", "Needs API access and the match video"],
+], [2.0, 0.9, 3.6], font_size=8.6)
 
 doc.core_properties.title = ("Matchcall: A Fact-Grounded, Low-Cost Pipeline for Spoken Football "
                              "Commentary")
